@@ -21,7 +21,8 @@ def parse_hand(hand_data):
                 "seat": player["seat"],
                 "starting_stack": player["starting_stack"],
                 "cards": "? ?",
-                "status": "Active"
+                "status": "Active",
+                "chips": player["starting_stack"]
             }
             for player in ohh_data["players"]
         ],
@@ -36,7 +37,6 @@ def parse_hand(hand_data):
     board_cards = []
     folded_players = set()
 
-    # Iterate over each round and each action within the round
     for round_info in ohh_data["rounds"]:
         # At the start of each new round, reset status to "Waiting" for active players
         for player in parsed_data["players"]:
@@ -59,13 +59,12 @@ def parse_hand(hand_data):
 
             # Update players’ states based on the action
             for player in parsed_data["players"]:
-                # Copy player state from the previous action, maintaining previous `status` and `actual_bet`
                 player_state = {
                     "name": player["name"],
                     "status": "Folded" if player["name"] in folded_players else player["status"],
                     "actual_bet": player["actual_bet"],
                     "cards": player["cards"],
-                    "chips": player["starting_stack"]
+                    "chips": player["chips"]
                 }
 
                 # Apply the current action to the relevant player
@@ -74,21 +73,23 @@ def parse_hand(hand_data):
                         player_state["status"] = "Folded"
                         folded_players.add(player["name"])
                     elif action["action"] == "Dealt Cards":
-                        # Show the hero's cards when dealt
                         player_state["cards"] = " ".join(action.get("cards", ["? ?"]))
                         player["cards"] = player_state["cards"]
                     else:
                         player_state["status"] = action["action"]
 
-                    # Update the player's bet only if they are not folded
-                    if player_state["status"] != "Folded":
-                        player_state["actual_bet"] += action.get("amount", 0)
-                        round_pot += action.get("amount", 0)
+                        # Calculate amount to deduct and update actual_bet
+                        action_amount = action.get("amount", 0)
+                        player_state["actual_bet"] += action_amount  # Add to existing bet
+                        player_state["chips"] -= action_amount  # Directly reduce chips by action amount
+                        round_pot += action_amount
 
-                # Update the main player state in parsed_data to maintain consistency for the next action
-                player["actual_bet"] = player_state["actual_bet"]
+                        # Update the player's chips and actual_bet
+                        player["chips"] = player_state["chips"]
+                        player["actual_bet"] = player_state["actual_bet"]
+
+                # Update the main player state in parsed_data for the next action
                 player["status"] = player_state["status"]
-                player["starting_stack"] = player_state["chips"]
 
                 # Append the player state to the action snapshot
                 action_snapshot["players"].append(player_state)

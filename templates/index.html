@@ -6,21 +6,37 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div>
-        <h2>Poker Hand Replayer</h2>
+    <h2>Poker Hand Replayer</h2>
+    
+    <!-- File Upload Section -->
+    <div id="uploadSection">
         <input type="file" id="handFile" name="file">
         <button onclick="uploadFile()">Upload Hand File</button>
     </div>
     
+    <!-- Game Info Display Section -->
     <div id="gameInfo">
-        <h3>Current Game State</h3>
         <p><strong>Round:</strong> <span id="roundDisplay">N/A</span></p>
         <p><strong>Action Description:</strong> <span id="descriptionDisplay">N/A</span></p>
         <p><strong>Pot:</strong> <span id="potDisplay">0</span></p>
         <p><strong>Board:</strong> <span id="boardDisplay">None</span></p>
-        <ul id="playersList"></ul>
+        
+        <!-- Player Information Table -->
+        <table id="playersTable">
+            <thead>
+                <tr>
+                    <th>Player Name</th>
+                    <th>Chips</th>
+                    <th>Cards</th>
+                    <th>Status</th>
+                    <th>Bet</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
     
+    <!-- Navigation Buttons -->
     <div class="navigation-buttons">
         <button onclick="prevAction()">Previous</button>
         <button onclick="nextAction()">Next</button>
@@ -67,13 +83,19 @@
             document.getElementById('boardDisplay').textContent = action.board.join(", ") || "None";
             document.getElementById('descriptionDisplay').textContent = action.description;
 
-            const playersList = document.getElementById('playersList');
-            playersList.innerHTML = '';  // Clear previous list
+            const playersTableBody = document.querySelector("#playersTable tbody");
+            playersTableBody.innerHTML = '';  // Clear previous rows
 
             action.players.forEach(player => {
-                const li = document.createElement('li');
-                li.textContent = `${player.name} | Chips: ${player.chips} | Status: ${player.status} | Bet: ${player.actual_bet} | Cards: ${player.cards}`;
-                playersList.appendChild(li);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${player.name}</td>
+                    <td>${player.chips.toFixed(2)}</td>
+                    <td>${player.cards}</td>
+                    <td>${player.status}</td>
+                    <td>${player.actual_bet.toFixed(2)}</td>
+                `;
+                playersTableBody.appendChild(row);
             });
         }
 
