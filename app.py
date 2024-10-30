@@ -27,7 +27,8 @@ def parse_hand(hand_data):
             for player in ohh_data["players"]
         ],
         "actions": [],
-        "board_cards": []
+        "board_cards": [],
+        "pot_info": None
     }
 
     # Game state table
@@ -40,14 +41,20 @@ def parse_hand(hand_data):
     for round_info in ohh_data["rounds"]:
         # At the start of each new round, reset status to "Waiting" for active players
         for player in parsed_data["players"]:
+            player["actual_bet"] = 0
             if player["name"] not in folded_players:
-                player["actual_bet"] = 0
                 player["status"] = "Waiting"
+            else :
+                player["status"] = "Folded"
 
         for action in round_info["actions"]:
             # Generate a description for the action
-            action_description = f"{players[action['player_id']]['name']} {action['action']} for {action.get('amount', 0)}"
-
+            action_amount = action.get('amount',0)
+            if action_amount == 0:
+                action_description = f"{players[action['player_id']]['name']}: {action['action']}"
+            else :
+                action_description = f"{players[action['player_id']]['name']}: {action['action']} for {action_amount}"
+                
             # Prepare current state snapshot for this action
             action_snapshot = {
                 "round": round_info["street"],
@@ -61,7 +68,7 @@ def parse_hand(hand_data):
             for player in parsed_data["players"]:
                 player_state = {
                     "name": player["name"],
-                    "status": "Folded" if player["name"] in folded_players else player["status"],
+                    "status": player["status"],
                     "actual_bet": player["actual_bet"],
                     "cards": player["cards"],
                     "chips": player["chips"]
@@ -70,14 +77,17 @@ def parse_hand(hand_data):
                 # Apply the current action to the relevant player
                 if player["name"] == players[action["player_id"]]["name"]:
                     if action["action"] == "Fold":
-                        player_state["status"] = "Folded"
+                        player_state["status"] = "Fold"
                         folded_players.add(player["name"])
                     elif action["action"] == "Dealt Cards":
                         player_state["cards"] = " ".join(action.get("cards", ["? ?"]))
                         player["cards"] = player_state["cards"]
+                    elif action["action"] == "Shows Cards":
+                        player_state["cards"] = " ".join(action.get("cards", ["? ?"]))
+                        player["cards"] = player_state["cards"]
+                        player_state["status"] = "Shows cards"
                     else:
                         player_state["status"] = action["action"]
-
                         # Calculate amount to deduct and update actual_bet
                         action_amount = action.get("amount", 0)
                         player_state["actual_bet"] += action_amount  # Add to existing bet
@@ -107,6 +117,25 @@ def parse_hand(hand_data):
             action_snapshot["board"] = board_cards[:]
             game_state_table.append(action_snapshot)
 
+    # Include pot and winnings information if present
+    if "pots" in ohh_data and ohh_data["pots"]:
+        parsed_data["pot_info"] = [
+            {
+                "rake": pot["rake"],
+                "amount": pot["amount"],
+                "player_wins": [
+                    {
+                        "name": players[win["player_id"]]["name"],
+                        "win_amount": win["win_amount"],
+                        "cashout_fee": win.get("cashout_fee", 0.00),
+                        "cashout_amount": win.get("cashout_amount", win["win_amount"])
+                    }
+                    for win in pot["player_wins"]
+                ]
+            }
+            for pot in ohh_data["pots"]
+        ]
+
     parsed_data["game_state_table"] = game_state_table
     return parsed_data
 
@@ -135,7 +164,7 @@ def upload_hand():
             session['parsed_hand'] = parsed_hand
             session['current_action_index'] = 0  
 
-            return jsonify({"message": "File uploaded successfully", "game_state_table": parsed_hand["game_state_table"]}), 200
+            return jsonify({"message": "File uploaded successfully", "game_state_table": parsed_hand["game_state_table"], "pot_info": parsed_hand["pot_info"]}), 200
 
         except json.JSONDecodeError:
             return jsonify({"error": "Invalid JSON file format"}), 400
@@ -171,4 +200,3 @@ def get_board_cards_count(street):
 
 if __name__ == '__main__':
     app.run(debug=True)
-

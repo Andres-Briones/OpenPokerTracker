@@ -34,6 +34,23 @@
             </thead>
             <tbody></tbody>
         </table>
+
+        <!-- Final Pot Information -->
+        <div id="potInfo" style="display: none;">
+            <h3>Final Pot Information</h3>
+            <p class="pot-summary">Total Pot: <span id="totalPotDisplay"></span> | Rake: <span id="rakeDisplay"></span></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Winner</th>
+                        <th>Win Amount</th>
+                        <th>Cashout Fee</th>
+                        <th>Cashout Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="potWinnersTable"></tbody>
+            </table>
+        </div>
     </div>
     
     <!-- Navigation Buttons -->
@@ -45,6 +62,7 @@
     <script>
         let gameStateTable = [];
         let currentActionIndex = 0;
+        let potInfo = null;
 
         async function uploadFile() {
             const fileInput = document.getElementById('handFile');
@@ -65,6 +83,7 @@
 
                 if (data.message === "File uploaded successfully") {
                     gameStateTable = data.game_state_table;
+                    potInfo = data.pot_info;
                     currentActionIndex = 0;
                     displayAction(gameStateTable[currentActionIndex]);
                 } else {
@@ -92,10 +111,39 @@
                     <td>${player.name}</td>
                     <td>${player.chips.toFixed(2)}</td>
                     <td>${player.cards}</td>
-                    <td>${player.status}</td>
-                    <td>${player.actual_bet.toFixed(2)}</td>
+                    <td>${player.status === "Folded" ? '' : player.status}</td> <!-- Hide status if folded -->
+                    <td>${player.actual_bet ? player.actual_bet.toFixed(2) : ''}</td> <!-- Hide zero bets -->
                 `;
                 playersTableBody.appendChild(row);
+            });
+
+            // Display pot info if it’s the final action
+            if (currentActionIndex === gameStateTable.length - 1 && potInfo) {
+                displayPotInfo();
+            } else {
+                document.getElementById('potInfo').style.display = 'none';
+            }
+        }
+
+        function displayPotInfo() {
+            document.getElementById('potInfo').style.display = 'block';
+            const totalPot = potInfo[0].amount || 0;
+            const rake = potInfo[0].rake || 0;
+
+            document.getElementById('totalPotDisplay').textContent = totalPot.toFixed(2);
+            document.getElementById('rakeDisplay').textContent = rake.toFixed(2);
+
+            const potWinnersTableBody = document.getElementById('potWinnersTable');
+            potWinnersTableBody.innerHTML = '';
+            potInfo[0].player_wins.forEach(winner => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${winner.name}</td>
+                    <td>${winner.win_amount.toFixed(2)}</td>
+                    <td>${winner.cashout_fee.toFixed(2)}</td>
+                    <td>${winner.cashout_amount.toFixed(2)}</td>
+                `;
+                potWinnersTableBody.appendChild(row);
             });
         }
 

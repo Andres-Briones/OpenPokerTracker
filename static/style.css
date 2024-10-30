@@ -6,14 +6,15 @@ body {
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    height: 100vh;
+    min-height: 100vh;
     margin: 0;
-    padding: 0;
+    padding: 20px;
 }
 
 h2 {
     color: #333;
     margin-bottom: 20px;
+    font-size: 24px;
 }
 
 /* Upload Button Styles */
@@ -84,6 +85,28 @@ tr:nth-child(even) {
     background-color: #f2f2f2;
 }
 
+/* Final Pot Information Styling */
+#potInfo {
+    margin-top: 20px;
+    text-align: center;
+}
+
+#potInfo h3 {
+    font-size: 20px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+#potInfo p {
+    font-size: 16px;
+}
+
+.pot-summary {
+    font-size: 18px;
+    font-weight: bold;
+    color: #555;
+}
+
 /* Navigation Button Styles */
 .navigation-buttons {
     margin-top: 20px;
@@ -95,3 +118,4 @@ tr:nth-child(even) {
     margin: 0 10px;
     width: 120px;
 }
+
