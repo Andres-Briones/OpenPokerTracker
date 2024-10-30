@@ -6,66 +6,93 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div id="boardDisplay" class="board-box">Board Cards: </div>
-    <div id="potDisplay" class="info-box">Pot: 0.00</div>
-    <ul id="playersList" class="players-box"></ul>
-    <div id="actionDisplay" class="action-box"></div>
-
+    <div>
+        <h2>Poker Hand Replayer</h2>
+        <input type="file" id="handFile" name="file">
+        <button onclick="uploadFile()">Upload Hand File</button>
+    </div>
+    
+    <div id="gameInfo">
+        <h3>Current Game State</h3>
+        <p><strong>Round:</strong> <span id="roundDisplay">N/A</span></p>
+        <p><strong>Action Description:</strong> <span id="descriptionDisplay">N/A</span></p>
+        <p><strong>Pot:</strong> <span id="potDisplay">0</span></p>
+        <p><strong>Board:</strong> <span id="boardDisplay">None</span></p>
+        <ul id="playersList"></ul>
+    </div>
+    
     <div class="navigation-buttons">
         <button onclick="prevAction()">Previous</button>
         <button onclick="nextAction()">Next</button>
     </div>
 
-    <form id="handForm" enctype="multipart/form-data">
-        <input type="file" id="handFile" name="file">
-        <button type="button" onclick="uploadHand()">Upload Hand File</button>
-    </form>
-
     <script>
-        async function uploadHand() {
+        let gameStateTable = [];
+        let currentActionIndex = 0;
+
+        async function uploadFile() {
             const fileInput = document.getElementById('handFile');
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-
-            await fetch('/upload', {
-                method: 'POST',
-                body: formData
-            });
-
-            // Show initial state before the first action
-            await nextAction();
-        }
-
-        async function nextAction() {
-            const response = await fetch('/action/next');
-            const actionData = await response.json();
-            displayAction(actionData);
-        }
-
-        async function prevAction() {
-            const response = await fetch('/action/prev');
-            const actionData = await response.json();
-            displayAction(actionData);
-        }
-
-        function displayAction(data) {
-            if (data.message) {
-                document.getElementById('actionDisplay').textContent = data.message;
+            if (!fileInput.files.length) {
+                alert("Please select a file first.");
                 return;
             }
 
-            document.getElementById('boardDisplay').textContent = `Board Cards: ${data.board_cards.join(", ")}`;
-            document.getElementById('potDisplay').textContent = `Pot: ${data.pot.toFixed(2)}`;
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.message === "File uploaded successfully") {
+                    gameStateTable = data.game_state_table;
+                    currentActionIndex = 0;
+                    displayAction(gameStateTable[currentActionIndex]);
+                } else {
+                    alert("Error uploading file: " + data.error);
+                }
+            } catch (error) {
+                console.error("Upload failed:", error);
+            }
+        }
+
+        function displayAction(action) {
+            if (!action) return;
+
+            document.getElementById('roundDisplay').textContent = action.round;
+            document.getElementById('potDisplay').textContent = action.pot.toFixed(2);
+            document.getElementById('boardDisplay').textContent = action.board.join(", ") || "None";
+            document.getElementById('descriptionDisplay').textContent = action.description;
 
             const playersList = document.getElementById('playersList');
-            playersList.innerHTML = '';
-            data.players.forEach(player => {
+            playersList.innerHTML = '';  // Clear previous list
+
+            action.players.forEach(player => {
                 const li = document.createElement('li');
-                li.textContent = `${player.name} (${player.starting_stack}) | ${player.cards} | ${player.action} | ${player.actual_bet}`;
+                li.textContent = `${player.name} | Chips: ${player.chips} | Status: ${player.status} | Bet: ${player.actual_bet} | Cards: ${player.cards}`;
                 playersList.appendChild(li);
             });
+        }
 
-            document.getElementById('actionDisplay').textContent = `Round: ${data.current_action.round} | ${data.current_action.player_name} ${data.current_action.action} for ${data.current_action.amount}`;
+        async function nextAction() {
+            if (currentActionIndex < gameStateTable.length - 1) {
+                currentActionIndex++;
+                displayAction(gameStateTable[currentActionIndex]);
+            } else {
+                alert("No more actions.");
+            }
+        }
+
+        async function prevAction() {
+            if (currentActionIndex > 0) {
+                currentActionIndex--;
+                displayAction(gameStateTable[currentActionIndex]);
+            } else {
+                alert("This is the first action.");
+            }
         }
     </script>
 </body>
