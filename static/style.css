@@ -1,24 +1,44 @@
 body {
     font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
     text-align: center;
-    padding: 20px;
 }
 
-textarea {
-    width: 100%;
-    height: 100px;
-    margin-top: 10px;
+#boardDisplay {
+    font-size: 1.5em;
+    font-weight: bold;
+    text-align: center;
+    margin: 20px auto;
+    padding: 15px;
+    background-color: #fff;
+    border: 2px solid #444;
+    width: 80%;
+}
+
+.players-box, .info-box, .action-box {
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin: 20px auto;
+    width: 70%;
+    text-align: left;
+}
+
+#playersList {
+    list-style-type: none;
+    padding: 0;
+}
+
+#playersList li {
+    padding: 5px 0;
+    border-bottom: 1px solid #ddd;
+    font-size: 1.1em;
 }
 
 button {
-    margin-top: 10px;
-    padding: 10px;
-}
-
-#handDisplay {
-    margin-top: 20px;
-    white-space: pre-wrap;
-    background-color: #f9f9f9;
-    padding: 10px;
-    border: 1px solid #ddd;
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 1em;
+    cursor: pointer;
 }
