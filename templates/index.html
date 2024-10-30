@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Poker Hand Replayer</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Poker Hand Replayer</h1>
+    <form id="handForm" enctype="multipart/form-data">
+        <input type="file" id="handFile" name="file">
+        <button type="button" onclick="uploadHand()">Upload Hand File</button>
+    </form>
+    
+    <div id="handDisplay">
+        <h2>Players:</h2>
+        <ul id="playersList"></ul>
+        <h2>Actions:</h2>
+        <div id="actionDisplay"></div>
+        <button onclick="prevAction()">Previous</button>
+        <button onclick="nextAction()">Next</button>
+    </div>
+
+    <script>
+        let parsedHand = {};
+        let currentActionIndex = 0;
+        let actions = [];  // Store all actions sequentially from rounds
+
+        async function uploadHand() {
+            const fileInput = document.getElementById('handFile');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            parsedHand = await response.json();
+            if (parsedHand.error) {
+                alert(parsedHand.error);
+                return;
+            }
+
+            displayPlayers();
+            prepareActions();
+            displayAction();
+        }
+
+        function displayPlayers() {
+            const playersList = document.getElementById('playersList');
+            playersList.innerHTML = '';
+            parsedHand.players.forEach(player => {
+                const li = document.createElement('li');
+                li.textContent = `${player.name} - Starting Stack: ${player.starting_stack}`;
+                playersList.appendChild(li);
+            });
+        }
+
+        function prepareActions() {
+            actions = [];
+            parsedHand.rounds.forEach(round => {
+                round.actions.forEach(action => {
+                    actions.push({
+                        round: round.street,
+                        action_number: action.action_number,
+                        player_id: action.player_id,
+                        action: action.action,
+                        amount: action.amount,
+                        is_allin: action.is_allin
+                    });
+                });
+            });
+            currentActionIndex = 0;
+        }
+
+        function displayAction() {
+            const actionDisplay = document.getElementById('actionDisplay');
+            if (currentActionIndex < 0 || currentActionIndex >= actions.length) {
+                actionDisplay.textContent = "No more actions.";
+                return;
+            }
+            const action = actions[currentActionIndex];
+            actionDisplay.textContent = `Round: ${action.round} | Action #${action.action_number} | Player ID: ${action.player_id} | ${action.action} ${action.amount ? "for " + action.amount : ""} ${action.is_allin ? "(All-in)" : ""}`;
+        }
+
+        function prevAction() {
+            if (currentActionIndex > 0) {
+                currentActionIndex--;
+                displayAction();
+            }
+        }
+
+        function nextAction() {
+            if (currentActionIndex < actions.length - 1) {
+                currentActionIndex++;
+                displayAction();
+            }
+        }
+    </script>
+</body>
+</html>
