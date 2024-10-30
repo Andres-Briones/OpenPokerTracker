@@ -1,7 +1,7 @@
-/* General Styles */
+/* General Layout */
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f9;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f4f8;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -9,15 +9,18 @@ body {
     min-height: 100vh;
     margin: 0;
     padding: 20px;
+    color: #333;
 }
 
 h2 {
-    color: #333;
+    color: #2c3e50;
     margin-bottom: 20px;
-    font-size: 24px;
+    font-size: 28px;
+    font-weight: bold;
+    text-align: center;
 }
 
-/* Upload Button Styles */
+/* Upload Section */
 #uploadSection {
     margin-bottom: 20px;
     display: flex;
@@ -25,47 +28,74 @@ h2 {
     align-items: center;
 }
 
-button {
-    background-color: #007BFF;
+#uploadSection input[type="file"] {
+    display: none;
+}
+
+#uploadSection label {
+    background-color: #3498db;
     color: white;
-    border: none;
-    padding: 10px 15px;
+    padding: 10px 20px;
     border-radius: 5px;
     cursor: pointer;
     font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+#uploadSection label:hover {
+    background-color: #2980b9;
+}
+
+button {
+    background-color: #e67e22;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
     margin-top: 10px;
-    width: 160px;
 }
 
 button:hover {
-    background-color: #0056b3;
+    background-color: #d35400;
 }
 
 /* Game Info Section */
 #gameInfo {
+    background: white;
+    width: 100%;
+    max-width: 900px;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
     text-align: center;
-    margin-top: 15px;
-    margin-bottom: 20px;
-    width: 80%;
-    max-width: 800px;
-    padding: 20px;
-    border-radius: 10px;
-    background-color: #fff;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 #gameInfo p {
-    font-size: 16px;
-    margin: 5px 0;
+    font-size: 18px;
+    margin: 8px 0;
+    font-weight: 500;
+}
+
+#gameInfo strong {
+    color: #2c3e50;
 }
 
 /* Table Styles */
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10px;
+    margin-top: 20px;
     font-size: 16px;
-    text-align: center;
+}
+
+table thead {
+    background-color: #3498db;
+    color: white;
+    font-weight: bold;
 }
 
 table, th, td {
@@ -73,38 +103,54 @@ table, th, td {
 }
 
 th, td {
-    padding: 12px;
-}
-
-th {
-    background-color: #007BFF;
-    color: white;
+    padding: 15px;
+    text-align: center;
 }
 
 tr:nth-child(even) {
-    background-color: #f2f2f2;
+    background-color: #f9fbfc;
+}
+
+tr:hover {
+    background-color: #f1f7ff;
+}
+
+th {
+    background-color: #2980b9;
 }
 
 /* Final Pot Information Styling */
 #potInfo {
-    margin-top: 20px;
+    margin-top: 30px;
     text-align: center;
 }
 
 #potInfo h3 {
-    font-size: 20px;
-    margin-bottom: 10px;
-    color: #333;
+    font-size: 22px;
+    margin-bottom: 15px;
+    color: #34495e;
 }
 
 #potInfo p {
-    font-size: 16px;
+    font-size: 18px;
+    font-weight: 500;
+    color: #555;
 }
 
 .pot-summary {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: bold;
-    color: #555;
+    color: #333;
+}
+
+/* Winner Table */
+#potWinnersTable th {
+    background-color: #27ae60;
+    color: white;
+}
+
+#potWinnersTable tr:nth-child(even) {
+    background-color: #e8f5e9;
 }
 
 /* Navigation Button Styles */
@@ -115,7 +161,16 @@ tr:nth-child(even) {
 }
 
 .navigation-buttons button {
+    background-color: #1abc9c;
     margin: 0 10px;
     width: 120px;
+    font-size: 16px;
+    padding: 12px;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.navigation-buttons button:hover {
+    background-color: #16a085;
 }
 
