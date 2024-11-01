@@ -1,70 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Poker Hand Replayer</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-    <h2>Poker Hand Replayer</h2>
-    
-    <!-- File Upload Section -->
-    <div id="uploadSection">
-        <label for="handFile">Choose File</label>
-        <input type="file" id="handFile" name="file">
-        <button onclick="uploadFile()">Upload Hand File</button>
-    </div>
-    
-    <!-- Game Info Display Section -->
-    <div id="gameInfo">
-        <p><strong>Round:</strong> <span id="roundDisplay">N/A</span></p>
-        <p><strong>Action Description:</strong> <span id="descriptionDisplay">N/A</span></p>
-        <p><strong>Pot:</strong> <span id="potDisplay">0</span></p>
-        <p><strong>Board:</strong> <span id="boardDisplay">None</span></p>
+    <head>
+        <meta charset="UTF-8">
+        <title>Poker Hand Replayer</title>
+        <link rel="stylesheet" href="/static/style.css">
+    </head>
+    <body>
+        <h2>Poker Hand Replayer</h2>
         
-        <!-- Player Information Table -->
-        <table id="playersTable">
-            <thead>
-                <tr>
-                    <th>Player Name</th>
-                    <th>Chips</th>
-                    <th>Cards</th>
-                    <th>Status</th>
-                    <th>Bet</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+        <!-- File Upload Section -->
+        <div id="uploadSection">
+            <label for="handFile">Choose File</label>
+            <input type="file" id="handFile" name="file">
+            <button onclick="uploadFile()">Upload Hand File</button>
+        </div>
+        <div id="handsMenu" style="display: none;">
+            <h3>Select a Hand</h3>
+            <select id="handSelect" onchange="selectHand()">
+                <option value="">-- Choose a hand --</option>
+            </select>
+        </div>
 
-        <!-- Final Pot Information -->
-        <div id="potInfo" style="display: none;">
-            <h3>Final Pot Information</h3>
-            <p class="pot-summary">Total Pot: <span id="totalPotDisplay"></span> | Rake: <span id="rakeDisplay"></span></p>
-            <table>
+        
+        <!-- Game Info Display Section -->
+        <div id="gameInfo">
+            <p><strong>Round:</strong> <span id="roundDisplay">N/A</span></p>
+            <p><strong>Action Description:</strong> <span id="descriptionDisplay">N/A</span></p>
+            <p><strong>Pot:</strong> <span id="potDisplay">0</span></p>
+            <p><strong>Board:</strong> <span id="boardDisplay">None</span></p>
+            
+            <!-- Player Information Table -->
+            <table id="playersTable">
                 <thead>
                     <tr>
-                        <th>Winner</th>
-                        <th>Win Amount</th>
-                        <th>Cashout Fee</th>
-                        <th>Cashout Amount</th>
+                        <th>Player Name</th>
+                        <th>Chips</th>
+                        <th>Cards</th>
+                        <th>Status</th>
+                        <th>Bet</th>
                     </tr>
                 </thead>
-                <tbody id="potWinnersTable"></tbody>
+                <tbody></tbody>
             </table>
-        </div>
-    </div>
-    
-    <!-- Navigation Buttons -->
-    <div class="navigation-buttons">
-        <button onclick="prevAction()">Previous</button>
-        <button onclick="nextAction()">Next</button>
-    </div>
 
-    <script>
+            <!-- Final Pot Information -->
+            <div id="potInfo" style="display: none;">
+                <h3>Final Pot Information</h3>
+                <p class="pot-summary">Total Pot: <span id="totalPotDisplay"></span> | Rake: <span id="rakeDisplay"></span></p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Winner</th>
+                            <th>Win Amount</th>
+                            <th>Cashout Fee</th>
+                            <th>Cashout Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="potWinnersTable"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Navigation Buttons -->
+        <div class="navigation-buttons">
+            <button onclick="prevAction()">Previous</button>
+            <button onclick="nextAction()">Next</button>
+        </div>
+
+        <script>
         let gameStateTable = [];
         let currentActionIndex = 0;
-        let potInfo = null;
-
+        let potInfo = [];
         async function uploadFile() {
             const fileInput = document.getElementById('handFile');
             if (!fileInput.files.length) {
@@ -76,22 +82,58 @@
             formData.append('file', fileInput.files[0]);
 
             try {
-                const response = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                });
+                const response = await fetch('/upload', { method: 'POST', body: formData });
                 const data = await response.json();
 
                 if (data.message === "File uploaded successfully") {
-                    gameStateTable = data.game_state_table;
-                    potInfo = data.pot_info;
-                    currentActionIndex = 0;
-                    displayAction(gameStateTable[currentActionIndex]);
+                    handsList = data.hands_list;
+                    populateHandsMenu();
                 } else {
                     alert("Error uploading file: " + data.error);
                 }
             } catch (error) {
                 console.error("Upload failed:", error);
+            }
+        }
+        function populateHandsMenu() {
+            const handsMenu = document.getElementById('handsMenu');
+            const handSelect = document.getElementById('handSelect');
+            handSelect.innerHTML = '<option value="">-- Choose a hand --</option>';
+
+            handsList.forEach((hand, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `Game Code: ${hand.game_code}, Date: ${hand.date_time}, Hero Cards: ${hand.hero_cards}`;
+                handSelect.appendChild(option);
+            });
+
+            handsMenu.style.display = 'block';
+        }
+
+        async function selectHand() {
+            const handSelect = document.getElementById('handSelect');
+            const selectedIndex = handSelect.value;
+
+            if (selectedIndex === "") return;
+
+            try {
+                const response = await fetch('/select_hand', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ hand_index: parseInt(selectedIndex) })
+                });
+                const data = await response.json();
+
+                if (data.message === "Hand loaded") {
+                    currentActionIndex = 0;
+                    potInfo = data.pot_info;
+                    gameStateTable = data.game_state_table
+                    displayAction(gameStateTable[0]);
+                } else {
+                    alert("Error loading hand: " + data.error);
+                }
+            } catch (error) {
+                console.error("Error selecting hand:", error);
             }
         }
 
@@ -165,7 +207,7 @@
                 alert("This is the first action.");
             }
         }
-    </script>
-</body>
+        </script>
+    </body>
 </html>
 

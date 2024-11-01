@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, session
+from flask_session import Session
 import json
 from werkzeug.utils import secure_filename
 import os
@@ -6,14 +7,16 @@ import os
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
 app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['SESSION_TYPE'] = 'filesystem'
+Session(app)
 
 def parse_hand(hand_data):
     if "ohh" not in hand_data:
         return {"error": "Invalid hand data format. Missing 'ohh' key"}
-    
+
     ohh_data = hand_data["ohh"]
     players = {player["id"]: player for player in ohh_data["players"]}
-    
+
     parsed_data = {
         "players": [
             {
@@ -34,18 +37,21 @@ def parse_hand(hand_data):
     # Game state table
     game_state_table = []
     current_pot = 0
-    round_pot = 0
     board_cards = []
     folded_players = set()
 
+    current_round = None #Stores the actual round
+
     for round_info in ohh_data["rounds"]:
-        # At the start of each new round, reset status to "Waiting" for active players
-        for player in parsed_data["players"]:
-            player["actual_bet"] = 0
-            if player["name"] not in folded_players:
-                player["status"] = "Waiting"
-            else :
-                player["status"] = "Folded"
+        # At the start of each street, reset status to "Waiting" for active players
+        if current_round != round_info["street"]:
+            current_round = round_info["street"]
+            for player in parsed_data["players"]:
+                player["actual_bet"] = 0
+                if player["name"] not in folded_players:
+                    player["status"] = "Waiting"
+                else :
+                    player["status"] = "Folded"
 
         for action in round_info["actions"]:
             # Generate a description for the action
@@ -54,12 +60,12 @@ def parse_hand(hand_data):
                 action_description = f"{players[action['player_id']]['name']}: {action['action']}"
             else :
                 action_description = f"{players[action['player_id']]['name']}: {action['action']} for {action_amount}"
-                
+
             # Prepare current state snapshot for this action
             action_snapshot = {
-                "round": round_info["street"],
+                "round": current_round,
                 "pot": current_pot,
-                "board": board_cards[:],  
+                "board": board_cards[:],
                 "players": [],
                 "description": action_description
             }
@@ -76,23 +82,17 @@ def parse_hand(hand_data):
 
                 # Apply the current action to the relevant player
                 if player["name"] == players[action["player_id"]]["name"]:
+                    player_state["status"] = action["action"]
                     if action["action"] == "Fold":
-                        player_state["status"] = "Fold"
                         folded_players.add(player["name"])
-                    elif action["action"] == "Dealt Cards":
-                        player_state["cards"] = " ".join(action.get("cards", ["? ?"]))
+                    elif action["action"] == "Dealt cards" or action["action"] == "Shows cards" :
+                        player_state["cards"] = " ".join(action.get("cards"))
                         player["cards"] = player_state["cards"]
-                    elif action["action"] == "Shows Cards":
-                        player_state["cards"] = " ".join(action.get("cards", ["? ?"]))
-                        player["cards"] = player_state["cards"]
-                        player_state["status"] = "Shows cards"
                     else:
-                        player_state["status"] = action["action"]
                         # Calculate amount to deduct and update actual_bet
-                        action_amount = action.get("amount", 0)
                         player_state["actual_bet"] += action_amount  # Add to existing bet
                         player_state["chips"] -= action_amount  # Directly reduce chips by action amount
-                        round_pot += action_amount
+                        current_pot += action_amount
 
                         # Update the player's chips and actual_bet
                         player["chips"] = player_state["chips"]
@@ -104,11 +104,6 @@ def parse_hand(hand_data):
                 # Append the player state to the action snapshot
                 action_snapshot["players"].append(player_state)
 
-            # At the end of the round, add round_pot to current_pot and reset round_pot
-            if action == round_info["actions"][-1]:
-                current_pot += round_pot
-                round_pot = 0
-
             # Track board cards as they appear
             if "cards" in round_info and round_info["cards"]:
                 board_cards = round_info["cards"]
@@ -118,7 +113,7 @@ def parse_hand(hand_data):
             game_state_table.append(action_snapshot)
 
     # Include pot and winnings information if present
-    if "pots" in ohh_data and ohh_data["pots"]:
+    if "pots" in ohh_data:
         parsed_data["pot_info"] = [
             {
                 "rake": pot["rake"],
@@ -139,6 +134,28 @@ def parse_hand(hand_data):
     parsed_data["game_state_table"] = game_state_table
     return parsed_data
 
+def parse_multiple_hands(hands_data):
+    hands_list = []
+    for hand_data in hands_data:
+        ohh_data = hand_data.get("ohh", {})
+        hero_id = ohh_data.get("hero_player_id")
+        hero_cards = ""
+
+        # Find hero's dealt cards
+        for round_info in ohh_data.get("rounds", []):
+            for action in round_info.get("actions", []):
+                if action.get("player_id") == hero_id and "cards" in action:
+                    hero_cards = " ".join(action["cards"])
+
+        # Append hand info to list
+        hands_list.append({
+            "game_code": ohh_data.get("game_number"),
+            "date_time": ohh_data.get("start_date_utc"),
+            "hero_cards": hero_cards
+        })
+
+    return hands_list
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -158,16 +175,51 @@ def upload_hand():
 
         try:
             with open(file_path, 'r') as f:
-                hand_data = json.load(f)
-            
-            parsed_hand = parse_hand(hand_data)
-            session['parsed_hand'] = parsed_hand
-            session['current_action_index'] = 0  
+                # Read the entire file content
+                content = f.read()
 
-            return jsonify({"message": "File uploaded successfully", "game_state_table": parsed_hand["game_state_table"], "pot_info": parsed_hand["pot_info"]}), 200
+            # Split content by blank lines to separate each hand
+            hand_sections = [section.strip() for section in content.split('\n\n') if section.strip()]
+            hands_data = []
 
-        except json.JSONDecodeError:
-            return jsonify({"error": "Invalid JSON file format"}), 400
+            # Parse each JSON object individually
+            for hand_text in hand_sections:
+                try:
+                    hand_data = json.loads(hand_text)
+                    hands_data.append(hand_data)
+                except json.JSONDecodeError as e:
+                    print("Failed to parse hand:", hand_text)
+                    print("Error:", e)
+                    return jsonify({"error": "Invalid JSON format in one of the hand histories"}), 400
+
+            # Parse hands for menu display
+            hands_list = parse_multiple_hands(hands_data)
+            session['hands_data'] = hands_data
+            session['hands_list'] = hands_list
+            return jsonify({"message": "File uploaded successfully", "hands_list": hands_list}), 200
+
+        except Exception as e:
+            print("Unexpected error:", e)
+            return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
+
+
+@app.route('/select_hand', methods=['POST'])
+def select_hand():
+    selected_index = request.json.get('hand_index')
+    hands_data = session.get('hands_data')
+    if hands_data and 0 <= selected_index < len(hands_data):
+        selected_hand = hands_data[selected_index]
+        # Parse the selected hand for the replayer
+        parsed_hand = parse_hand(selected_hand)
+        session['parsed_hand'] = parsed_hand
+        session['current_action_index'] = 0
+        return jsonify({
+            "message": "Hand loaded",
+            "game_state_table": parsed_hand["game_state_table"],
+            "pot_info": parsed_hand.get("pot_info", None)
+        }), 200
+    return jsonify({"error": "Invalid hand selection"}), 400
+
 
 @app.route('/action/next', methods=['GET'])
 def next_action():
