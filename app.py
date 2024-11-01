@@ -11,7 +11,6 @@ app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
 
 def getCardSymbol(card):
-    print(card)
     suitSymbols = {
         'h': '♥', 
         's': '♠', 
@@ -103,7 +102,7 @@ def parse_hand(hand_data):
                     player_state["status"] = action["action"]
                     if action["action"] == "Fold":
                         folded_players.add(player["name"])
-                    elif action["action"] == "Dealt cards" or action["action"] == "Shows cards" :
+                    elif action["action"] == "Dealt Cards" or action["action"] == "Shows Cards" :
                         player_state["cards"] = cardsListToString(action["cards"])
                         player["cards"] = player_state["cards"]
                     else:
