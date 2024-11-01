@@ -1,71 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>Poker Hand Replayer</title>
-        <link rel="stylesheet" href="/static/style.css">
-    </head>
-    <body>
-        <h2>Poker Hand Replayer</h2>
-        
-        <!-- File Upload Section -->
-        <div id="uploadSection">
-            <label for="handFile">Choose File</label>
-            <input type="file" id="handFile" name="file">
-            <button onclick="uploadFile()">Upload Hand File</button>
-        </div>
-        <div id="handsMenu" style="display: none;">
-            <h3>Select a Hand</h3>
-            <select id="handSelect" onchange="selectHand()">
-                <option value="">-- Choose a hand --</option>
-            </select>
-        </div>
-
-        
-        <!-- Game Info Display Section -->
-        <div id="gameInfo">
-            <p><strong>Round:</strong> <span id="roundDisplay">N/A</span></p>
-            <p><strong>Action Description:</strong> <span id="descriptionDisplay">N/A</span></p>
-            <p><strong>Pot:</strong> <span id="potDisplay">0</span></p>
-            <p><strong>Board:</strong> <span id="boardDisplay">None</span></p>
-            
-            <!-- Player Information Table -->
-            <table id="playersTable">
-                <thead>
-                    <tr>
-                        <th>Player Name</th>
-                        <th>Chips</th>
-                        <th>Cards</th>
-                        <th>Status</th>
-                        <th>Bet</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-
-            <!-- Final Pot Information -->
-            <div id="potInfo" style="display: none;">
-                <h3>Final Pot Information</h3>
-                <p class="pot-summary">Total Pot: <span id="totalPotDisplay"></span> | Rake: <span id="rakeDisplay"></span></p>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Winner</th>
-                            <th>Win Amount</th>
-                            <th>Cashout Fee</th>
-                            <th>Cashout Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody id="potWinnersTable"></tbody>
-                </table>
+<head>
+    <meta charset="UTF-8">
+    <title>Poker Hand Replayer</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Centered Title -->
+    <h2>Poker Hand Replayer</h2>
+    
+    <!-- Flex Container for Main Content -->
+    <div id="mainContainer">
+        <!-- Left Sidebar for Upload and Hands Menu -->
+        <div id="sidebar">
+            <div id="handsMenu" style="display: true;">
+                <h3>Select a Hand</h3>
+                <select id="handSelect" onchange="selectHand()" size="20">
+                    <option value="">-- No hands available --</option> <!-- Initial placeholder -->
+                </select>
+            </div>
+            <div id="uploadSection">
+                <label for="handFile">Upload file</label>
+                <input type="file" id="handFile" name="file" onchange="uploadFile()">
             </div>
         </div>
-        
-        <!-- Navigation Buttons -->
-        <div class="navigation-buttons">
-            <button onclick="prevAction()">Previous</button>
-            <button onclick="nextAction()">Next</button>
+
+        <!-- Right Section for Game Info Display -->
+        <div id="gameInfoContainer">
+            
+            <!-- Navigation Buttons -->
+            <div class="navigation-buttons">
+                <button onclick="firstAction()">Beginning</button>
+                <button onclick="prevAction()">Previous</button>
+                <button onclick="nextAction()">Next</button>
+                <button onclick="lastAction()">End</button>
+            </div>
+
+            <div id="gameInfo">
+                <p><strong>Round:</strong> <span id="roundDisplay">N/A</span></p>
+                <p><strong>Pot:</strong> <span id="potDisplay">0</span></p>
+                <p><strong>Board:</strong></p>
+                <p><span id="boardDisplay"></span></p>
+                <p><strong>Action Description:</strong> <span id="descriptionDisplay">N/A</span></p>
+                
+                <table id="playersTable">
+                    <thead>
+                        <tr>
+                            <th>Player Name</th>
+                            <th>Chips</th>
+                            <th>Cards</th>
+                            <th>Status</th>
+                            <th>Bet</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <div id="potInfo" style="display: none;">
+                    <h3>Final Pot Information</h3>
+                    <p class="pot-summary">Total Pot: <span id="totalPotDisplay"></span> | Rake: <span id="rakeDisplay"></span></p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Winner</th>
+                                <th>Win Amount</th>
+                                <th>Cashout Fee</th>
+                                <th>Cashout Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="potWinnersTable"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
+    </div>
 
         <script>
         let gameStateTable = [];
@@ -82,7 +90,7 @@
             formData.append('file', fileInput.files[0]);
 
             try {
-                const response = await fetch('/upload', { method: 'POST', body: formData });
+                const response = await fetch('/upload', { method: 'POST', body: formData});
                 const data = await response.json();
 
                 if (data.message === "File uploaded successfully") {
@@ -103,7 +111,7 @@
             handsList.forEach((hand, index) => {
                 const option = document.createElement('option');
                 option.value = index;
-                option.textContent = `Game Code: ${hand.game_code}, Date: ${hand.date_time}, Hero Cards: ${hand.hero_cards}`;
+                option.textContent = `${hand.hero_cards ? hand.hero_cards : '? ?' }, ${hand.date_time}, ${hand.game_code}`;
                 handSelect.appendChild(option);
             });
 
@@ -125,16 +133,25 @@
                 const data = await response.json();
 
                 if (data.message === "Hand loaded") {
-                    currentActionIndex = 0;
                     potInfo = data.pot_info;
                     gameStateTable = data.game_state_table
-                    displayAction(gameStateTable[0]);
+                    currentActionIndex = gameStateTable.length - 1;
+                    displayAction(gameStateTable[currentActionIndex]);
                 } else {
                     alert("Error loading hand: " + data.error);
                 }
             } catch (error) {
                 console.error("Error selecting hand:", error);
             }
+        }
+        function appendCards(cards, display){
+            cards.forEach(card => {
+                const cardImage = document.createElement('img');
+                cardImage.src = `/static/images/cards/${card}.png`; // Assuming card names match the format "2H.png", etc.
+                cardImage.alt = card; // Fallback text in case image fails to load
+                cardImage.className = 'card-image'; // Add class for styling
+                display.appendChild(cardImage);
+            });
         }
 
         function displayAction(action) {
@@ -147,6 +164,11 @@
 
             const playersTableBody = document.querySelector("#playersTable tbody");
             playersTableBody.innerHTML = '';  // Clear previous rows
+
+            // Display card images on the board
+            const boardDisplay = document.getElementById('boardDisplay');
+            boardDisplay.innerHTML = ''; // Clear any previous images
+            appendCards(action.board, boardDisplay) // Add cards to boardDisplay
 
             action.players.forEach(player => {
                 const row = document.createElement('tr');
@@ -190,12 +212,22 @@
             });
         }
 
+        
+        async function firstAction() {
+            currentActionIndex = 0;
+            displayAction(gameStateTable[currentActionIndex]);
+        }
+
+        async function lastAction() {
+            currentActionIndex = gameStateTable.length -1;
+            displayAction(gameStateTable[currentActionIndex]);
+        }
+
         async function nextAction() {
             if (currentActionIndex < gameStateTable.length - 1) {
                 currentActionIndex++;
                 displayAction(gameStateTable[currentActionIndex]);
             } else {
-                alert("No more actions.");
             }
         }
 
@@ -204,7 +236,6 @@
                 currentActionIndex--;
                 displayAction(gameStateTable[currentActionIndex]);
             } else {
-                alert("This is the first action.");
             }
         }
         </script>

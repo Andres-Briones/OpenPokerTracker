@@ -10,6 +10,19 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
 
+def getCardSymbol(card):
+    print(card)
+    suitSymbols = {
+        'h': '♥', 
+        's': '♠', 
+        'd': '♦', 
+        'c': '♣'  
+    }
+    return card[0]+ suitSymbols[card[1]]
+
+def cardsListToString(cards):
+    return " ".join([getCardSymbol(card) for card in cards])
+
 def parse_hand(hand_data):
     if "ohh" not in hand_data:
         return {"error": "Invalid hand data format. Missing 'ohh' key"}
@@ -39,6 +52,7 @@ def parse_hand(hand_data):
     current_pot = 0
     board_cards = []
     folded_players = set()
+    board = []
 
     current_round = None #Stores the actual round
 
@@ -52,6 +66,10 @@ def parse_hand(hand_data):
                     player["status"] = "Waiting"
                 else :
                     player["status"] = "Folded"
+
+        # Track board cards as they appear
+        if "cards" in round_info :
+            board_cards += round_info["cards"]
 
         for action in round_info["actions"]:
             # Generate a description for the action
@@ -86,7 +104,7 @@ def parse_hand(hand_data):
                     if action["action"] == "Fold":
                         folded_players.add(player["name"])
                     elif action["action"] == "Dealt cards" or action["action"] == "Shows cards" :
-                        player_state["cards"] = " ".join(action.get("cards"))
+                        player_state["cards"] = cardsListToString(action["cards"])
                         player["cards"] = player_state["cards"]
                     else:
                         # Calculate amount to deduct and update actual_bet
@@ -104,12 +122,7 @@ def parse_hand(hand_data):
                 # Append the player state to the action snapshot
                 action_snapshot["players"].append(player_state)
 
-            # Track board cards as they appear
-            if "cards" in round_info and round_info["cards"]:
-                board_cards = round_info["cards"]
-
             action_snapshot["pot"] = current_pot
-            action_snapshot["board"] = board_cards[:]
             game_state_table.append(action_snapshot)
 
     # Include pot and winnings information if present
@@ -145,7 +158,7 @@ def parse_multiple_hands(hands_data):
         for round_info in ohh_data.get("rounds", []):
             for action in round_info.get("actions", []):
                 if action.get("player_id") == hero_id and "cards" in action:
-                    hero_cards = " ".join(action["cards"])
+                    hero_cards = cardsListToString(action["cards"])
 
         # Append hand info to list
         hands_list.append({
@@ -246,9 +259,6 @@ def prev_action():
 
     session['current_action_index'] = current_index - 1
     return jsonify(parsed_hand["game_state_table"][session['current_action_index']])
-
-def get_board_cards_count(street):
-    return {"Flop": 3, "Turn": 4, "River": 5}.get(street, 0)
 
 if __name__ == '__main__':
     app.run(debug=True)

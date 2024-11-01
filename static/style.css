@@ -3,26 +3,108 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #f0f4f8;
     display: flex;
-    justify-content: center;
-    align-items: center;
     flex-direction: column;
-    min-height: 100vh;
-    margin: 0;
+    align-items: left;
+    margin-left: 100px;
     padding: 20px;
     color: #333;
 }
 
+/* Centered Title */
 h2 {
     color: #2c3e50;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
     font-size: 28px;
     font-weight: bold;
     text-align: center;
 }
 
+/* Main Container for Flex Layout */
+#mainContainer {
+    display: flex;
+    width: 100%;
+    max-width: 1200px;
+    gap: 100px;
+}
+
+/* Sidebar Styling */
+#sidebar {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 400px;
+}
+
+/* Hands Menu Styling */
+#handsMenu {
+    width: 100%;
+    background-color: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+#handsMenu h3 {
+    color: #2c3e50;
+    font-size: 20px;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+/* Dropdown Styling */
+#handSelect {
+    width: 100%;
+    max-height: 200px; /* Limits height with scrolling */
+    padding: 8px;
+    font-size: 14px;
+    color: #333;
+    background-color: #f9fbfc;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-shadow: inset 0px 2px 4px rgba(0, 0, 0, 0.05);
+    overflow-y: auto;
+    outline: none;
+    transition: border 0.3s, box-shadow 0.3s;
+}
+
+/* Hover and Focus Effects for Dropdown */
+#handSelect:hover, #handSelect:focus {
+    border-color: #3498db;
+    box-shadow: 0px 0px 4px rgba(52, 152, 219, 0.3);
+}
+
+#handSelect option {
+    padding: 8px;
+    color: #333;
+    background-color: #f9fbfc;
+    border-bottom: 1px solid #eee;
+}
+
+#handSelect option:hover {
+    background-color: #3498db;
+    color: white;
+}
+
+#handSelect option:checked {
+    background-color: #2980b9;
+    color: white;
+}
+
+#handSelect {
+    width: 100%;
+    max-height: 500px; /* Enables scrolling for the dropdown */
+    overflow-y: auto;
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
 /* Upload Section */
 #uploadSection {
-    margin-bottom: 20px;
+    width: 100%;
+    margin-top: 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -33,7 +115,7 @@ h2 {
 }
 
 #uploadSection label {
-    background-color: #3498db;
+    background-color: #1abc9c;
     color: white;
     padding: 10px 20px;
     border-radius: 5px;
@@ -43,11 +125,11 @@ h2 {
 }
 
 #uploadSection label:hover {
-    background-color: #2980b9;
+    background-color: #16a085;
 }
 
 button {
-    background-color: #e67e22;
+    background-color: #1abc9c;
     color: white;
     border: none;
     padding: 10px 20px;
@@ -59,18 +141,27 @@ button {
 }
 
 button:hover {
-    background-color: #d35400;
+    background-color: #16a085;
+}
+
+
+/* Game Info Container on Right */
+#gameInfoContainer {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 /* Game Info Section */
 #gameInfo {
     background: white;
     width: 100%;
-    max-width: 900px;
+    max-width: 800px;
     padding: 30px;
     border-radius: 12px;
     box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
-    margin-bottom: 30px;
+    margin-top: 20px;
     text-align: center;
 }
 
@@ -155,9 +246,9 @@ th {
 
 /* Navigation Button Styles */
 .navigation-buttons {
-    margin-top: 20px;
     display: flex;
     justify-content: center;
+    margin-top: 20px;
 }
 
 .navigation-buttons button {
@@ -174,3 +265,9 @@ th {
     background-color: #16a085;
 }
 
+/* Add styling for card images */
+.card-image {
+    width: 80px; /* Set width as desired */
+    height: auto; /* Maintain aspect ratio */
+    margin: 5px; /* Optional: add space between cards */
+}
