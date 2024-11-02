@@ -168,7 +168,11 @@
             // Display card images on the board
             const boardDisplay = document.getElementById('boardDisplay');
             boardDisplay.innerHTML = ''; // Clear any previous images
-            appendCards(action.board, boardDisplay) // Add cards to boardDisplay
+            if (action.board.length == 0){
+                appendCards(['back', 'back', 'back'], boardDisplay) // Display 3 back cards
+            } else {
+                appendCards(action.board, boardDisplay) // Add cards to boardDisplay
+            }
 
             action.players.forEach(player => {
                 const row = document.createElement('tr');
