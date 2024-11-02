@@ -12,10 +12,13 @@ def cardsListToString(cards):
 
 def parse_hand(hand_data):
     if "ohh" not in hand_data:
-        return {"error": "Invalid hand data format. Missing 'ohh' key"}
+        print("Error", "Invalid hand data format. Missing 'ohh' key")
+        return {}
 
     ohh_data = hand_data["ohh"]
     players = {player["id"]: player for player in ohh_data["players"]}
+    hero_id = ohh_data.get("hero_player_id")
+    hero_cards = ""
 
     parsed_data = {
         "players": [
@@ -31,7 +34,7 @@ def parse_hand(hand_data):
         ],
         "actions": [],
         "board_cards": [],
-        "pot_info": None
+        "pot_info": None,
     }
 
     # Game state table
@@ -59,6 +62,10 @@ def parse_hand(hand_data):
             board_cards += round_info["cards"]
 
         for action in round_info["actions"]:
+
+            if action.get("player_id") == hero_id and "cards" in action:
+                hero_cards = cardsListToString(action["cards"])
+
             # Generate a description for the action
             action_amount = action.get('amount',0)
             if action_amount == 0:
@@ -132,4 +139,9 @@ def parse_hand(hand_data):
         ]
 
     parsed_data["game_state_table"] = game_state_table
+
+    parsed_data["game_code"] = ohh_data["game_number"]
+    parsed_data["date_time"] = ohh_data["start_date_utc"]
+    parsed_data["hero_cards"] = hero_cards 
+
     return parsed_data

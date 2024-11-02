@@ -79,6 +79,34 @@
         let gameStateTable = [];
         let currentActionIndex = 0;
         let potInfo = [];
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            await loadHandsList();  // Load hands list on page load
+        });
+
+        async function loadHandsList() {
+            try {
+                const response = await fetch('/get_hands_list');
+                const data = await response.json();
+                if (data.hands_list) {
+                    populateHandsMenu(data.hands_list);
+                }
+            } catch (error) {
+                console.error("Failed to load hands list:", error);
+            }
+        }
+
+        function populateHandsMenu(handsList) {
+            const handSelect = document.getElementById('handSelect');
+            handSelect.innerHTML = '<option value="">-- Choose a hand --</option>';
+
+            handsList.forEach((hand, index) => {
+                const option = document.createElement('option');
+                option.value = hand.id;
+                option.textContent = `${hand.hero_cards ? hand.hero_cards : '? ?' }, ${hand.date_time}, ${hand.game_code}`;
+                handSelect.appendChild(option);
+            });
+        }
         async function uploadFile() {
             const fileInput = document.getElementById('handFile');
             if (!fileInput.files.length) {
@@ -90,12 +118,15 @@
             formData.append('file', fileInput.files[0]);
 
             try {
-                const response = await fetch('/upload', { method: 'POST', body: formData});
+                const response = await fetch('/upload', { method: 'POST', body: formData });
                 const data = await response.json();
 
                 if (data.message === "File uploaded successfully") {
-                    handsList = data.hands_list;
-                    populateHandsMenu();
+                    // Refresh hands list after successful upload
+                    await loadHandsList();
+                    alert("File uploaded successfully!");
+                } else if (data.message === "File already exists in the database"){
+                    alert(data.message);
                 } else {
                     alert("Error uploading file: " + data.error);
                 }
@@ -103,47 +134,40 @@
                 console.error("Upload failed:", error);
             }
         }
-        function populateHandsMenu() {
-            const handsMenu = document.getElementById('handsMenu');
-            const handSelect = document.getElementById('handSelect');
-            handSelect.innerHTML = '<option value="">-- Choose a hand --</option>';
-
-            handsList.forEach((hand, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                option.textContent = `${hand.hero_cards ? hand.hero_cards : '? ?' }, ${hand.date_time}, ${hand.game_code}`;
-                handSelect.appendChild(option);
-            });
-
-            handsMenu.style.display = 'block';
-        }
 
         async function selectHand() {
             const handSelect = document.getElementById('handSelect');
-            const selectedIndex = handSelect.value;
-
-            if (selectedIndex === "") return;
-
+            const handID = handSelect.value;
+            
+            if (!handID) return;  // Do nothing if no hand is selected
+            
             try {
+                // Send the selected index to the server to load the hand details
                 const response = await fetch('/select_hand', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ hand_index: parseInt(selectedIndex) })
+                    body: JSON.stringify({ hand_index: parseInt(handID) })
                 });
                 const data = await response.json();
-
+                
                 if (data.message === "Hand loaded") {
+                    // Successfully loaded the hand, store its data
                     potInfo = data.pot_info;
-                    gameStateTable = data.game_state_table
-                    currentActionIndex = gameStateTable.length - 1;
+                    gameStateTable = data.game_state_table;
+                    currentActionIndex = gameStateTable.length-1;  // Start at the end the action list
+                    
+                    // Display the first action for the selected hand
                     displayAction(gameStateTable[currentActionIndex]);
                 } else {
                     alert("Error loading hand: " + data.error);
                 }
             } catch (error) {
                 console.error("Error selecting hand:", error);
+                alert("Failed to load the selected hand.");
             }
         }
+
+
         function appendCards(cards, display){
             cards.forEach(card => {
                 const cardImage = document.createElement('img');
