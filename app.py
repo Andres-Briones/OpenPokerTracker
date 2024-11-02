@@ -125,47 +125,53 @@ def upload_hand():
     if 'file' not in request.files:
         return jsonify({"error": "No file part in the request"}), 400
 
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
+    files = request.files.getlist('file')  # Get all files uploaded as 'file'
+    new_files_uploaded = False
 
-    file_path = uploads_dir / secure_filename(file.filename)
-    file.save(file_path)  # Save file to uploads directory
+    for file in files:
+        if file.filename == '':
+            continue  # Skip empty filenames
 
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        
-        # Check if the file already exists in the database
-        cursor.execute("SELECT id FROM files WHERE filename = ?", (file.filename,))
-        result = cursor.fetchone()
-        
-        if result:
-            # File already exists, return a message and skip adding hands
-            return jsonify({"message": "File already exists in the database"}), 200
-        
-        # Insert the file record into the database since it doesn't exist
-        cursor.execute("INSERT INTO files (filename) VALUES (?)", (file.filename,))
-        file_id = cursor.lastrowid
-        conn.commit()
+        file_path = uploads_dir / secure_filename(file.filename)
+        file.save(file_path)  # Save file to uploads directory
 
-    # If file is new, read and add hands to the database
-    with open(file_path, 'r') as f:
-        content = f.read()
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Check if the file already exists in the database
+            cursor.execute("SELECT id FROM files WHERE filename = ?", (file.filename,))
+            result = cursor.fetchone()
+            
+            if result:
+                # File already exists, skip adding hands for this file
+                continue
+            
+            # Insert the file record into the database since it doesn't exist
+            cursor.execute("INSERT INTO files (filename) VALUES (?)", (file.filename,))
+            file_id = cursor.lastrowid
+            conn.commit()
+            new_files_uploaded = True
 
-    hand_sections = [section.strip() for section in content.split('\n\n') if section.strip()]
-    for hand_text in hand_sections:
-        try:
-            hand_data = json.loads(hand_text)
-            parsed_hand = parse_hand(hand_data)
-            save_hand_to_db(file_id, parsed_hand, hand_data)  # Save each hand to the database
-        except json.JSONDecodeError as e:
-            print("Error: Invalid JSON format in hand history.")
-            return jsonify({"error": "Invalid JSON format in hand history"}), 400
+        # If file is new, read and add hands to the database
+        with open(file_path, 'r') as f:
+            content = f.read()
 
-    # Update session hands_list after successful upload
-    session["hands_list"] = load_hands_from_db()
+        hand_sections = [section.strip() for section in content.split('\n\n') if section.strip()]
+        for hand_text in hand_sections:
+            try:
+                hand_data = json.loads(hand_text)
+                parsed_hand = parse_hand(hand_data)
+                save_hand_to_db(file_id, parsed_hand, hand_data)  # Save each hand to the database
+            except json.JSONDecodeError as e:
+                print("Error: Invalid JSON format in hand history.")
+                return jsonify({"error": "Invalid JSON format in hand history"}), 400
+
+    # Update session hands_list only if new files were uploaded
+    if new_files_uploaded:
+        session["hands_list"] = load_hands_from_db()
 
     return jsonify({"message": "File uploaded successfully"}), 200
+
 
 @app.route('/select_hand', methods=['POST'])
 def select_hand():

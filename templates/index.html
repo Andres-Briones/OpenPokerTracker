@@ -20,8 +20,8 @@
                 </select>
             </div>
             <div id="uploadSection">
-                <label for="handFile">Upload file</label>
-                <input type="file" id="handFile" name="file" onchange="uploadFile()">
+                <input type="file" id="handFile" name="file" multiple style="display: none;" onchange="uploadFile()">
+                <button type="button" onclick="selectFiles()">Upload file(s)</button>
             </div>
         </div>
 
@@ -98,7 +98,7 @@
 
         function populateHandsMenu(handsList) {
             const handSelect = document.getElementById('handSelect');
-            handSelect.innerHTML = '<option value="">-- Choose a hand --</option>';
+            handSelect.innerHTML = '';
 
             handsList.forEach((hand, index) => {
                 const option = document.createElement('option');
@@ -107,33 +107,43 @@
                 handSelect.appendChild(option);
             });
         }
+
+        function selectFiles() {
+            document.getElementById('handFile').click();
+        }
+
         async function uploadFile() {
             const fileInput = document.getElementById('handFile');
-            if (!fileInput.files.length) {
-                alert("Please select a file first.");
+            const files = fileInput.files;
+
+            if (files.length === 0) {
+                alert("Please select at least one file.");
                 return;
             }
 
             const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
+            for (const file of files) {
+                formData.append('file', file);  // Append each file to formData
+            }
 
             try {
                 const response = await fetch('/upload', { method: 'POST', body: formData });
                 const data = await response.json();
 
                 if (data.message === "File uploaded successfully") {
-                    // Refresh hands list after successful upload
-                    await loadHandsList();
-                    alert("File uploaded successfully!");
-                } else if (data.message === "File already exists in the database"){
-                    alert(data.message);
+                    await loadHandsList();  // Refresh hands list after successful upload
+                    alert("Files uploaded successfully!");
                 } else {
-                    alert("Error uploading file: " + data.error);
+                    alert("Error uploading files: " + data.error);
                 }
             } catch (error) {
                 console.error("Upload failed:", error);
             }
+
+            // Clear the file input after upload so it can be reused
+            fileInput.value = '';
         }
+
 
         async function selectHand() {
             const handSelect = document.getElementById('handSelect');
