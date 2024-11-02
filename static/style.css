@@ -1,13 +1,68 @@
+
+/* Basic reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 /* General Layout */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #f0f4f8;
-    display: flex;
-    flex-direction: column;
-    align-items: left;
     margin-left: 100px;
     padding: 20px;
     color: #333;
+}
+
+header {
+    background-color: #333;
+    padding: 10px 0;
+}
+
+footer{
+    padding: 10px 0;
+}
+
+.navbar {
+    display: flex;
+    justify-content: center;
+}
+
+.menu {
+    list-style-type: none;
+    display: flex;
+    gap: 20px;
+}
+
+.menu li {
+    display: inline;
+}
+
+.menu a {
+    color: white;
+    text-decoration: none;
+    padding: 10px 15px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+    border-radius: 5px;
+}
+
+.menu a:hover {
+    background-color: #555;
+}
+
+.menu a.active {
+    background-color: #007bff;
+    color: white;
+}
+
+.main-content {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    margin: 0 auto;
+    align-items: left;
 }
 
 /* Centered Title */
@@ -22,8 +77,8 @@ h2 {
 /* Main Container for Flex Layout */
 #mainContainer {
     display: flex;
+    align-items: flex-start;
     width: 100%;
-    max-width: 1200px;
     gap: 100px;
 }
 
@@ -150,7 +205,7 @@ button:hover {
     flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
 }
 
 /* Game Info Section */
@@ -248,7 +303,7 @@ th {
 .navigation-buttons {
     display: flex;
     justify-content: center;
-    margin-top: 20px;
+    margin-bottom: 20px;
 }
 
 .navigation-buttons button {
