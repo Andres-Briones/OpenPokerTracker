@@ -66,6 +66,7 @@ This project is licensed under the MIT License.
 
 ### Future Plans
 
-Advanced Statistics: Expand the statistics module to provide deeper insights.
-Check opening ranges: Obtain your actual opening ranges and compare them to your desired strategy.
-Preflop range training: Add exercises to train your ranges at different positions and different situations.
+- Advanced Statistics: Expand the statistics module to provide deeper insights.
+- Check opening ranges: Obtain your actual opening ranges and compare them to your desired strategy.
+- Preflop range training: Add exercises to train your ranges at different positions and different situations.
+- HUD: It is not the goal of the app but maybe in the future it could be added if it's the only way to replace commercial softwares.
