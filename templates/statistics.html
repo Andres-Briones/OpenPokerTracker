@@ -7,17 +7,27 @@
 <table>
     <thead>
         <tr>
-            <th>Hero</th>
-            <th>Hands Participated</th>
-            <th>Hands Won</th>
+            <th>Name</th>
+            <th>Hands</th>
+            <th>VPIP (%)</th>
+            <th>PFR (%)</th>
+            <th>AF</th>
+            <th>ATS (%)</th>
+            <th>3-Bet (%)</th>
+            <th>Fold to 3-Bet (%)</th>
         </tr>
     </thead>
     <tbody>
         {% for stat in stats %}
         <tr>
-            <td>{{ stat.hero }}</td>
-            <td>{{ stat.hands_participated }}</td>
-            <td>{{ stat.hands_won }}</td>
+            <td>{{ stat.Name}}</td>
+            <td>{{ stat.Hands}}</td>
+            <td>{{ stat.VPIP}}</td>
+            <td>{{ stat.PFR}}</td>
+            <td>{{ stat.AF}}</td>
+            <td>{{ stat.ATS}}</td>
+            <td>{{ stat.ThreeBet}}</td>
+            <td>{{ stat.FoldToThreeBet}}</td>
         </tr>
         {% endfor %}
     </tbody>
