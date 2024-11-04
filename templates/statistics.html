@@ -11,23 +11,17 @@
             <th>Hands</th>
             <th>VPIP (%)</th>
             <th>PFR (%)</th>
-            <th>AF</th>
-            <th>ATS (%)</th>
-            <th>3-Bet (%)</th>
-            <th>Fold to 3-Bet (%)</th>
+            <th>Win rate ($ / 100 hands)
         </tr>
     </thead>
     <tbody>
         {% for stat in stats %}
         <tr>
-            <td>{{ stat.Name}}</td>
-            <td>{{ stat.Hands}}</td>
-            <td>{{ stat.VPIP}}</td>
-            <td>{{ stat.PFR}}</td>
-            <td>{{ stat.AF}}</td>
-            <td>{{ stat.ATS}}</td>
-            <td>{{ stat.ThreeBet}}</td>
-            <td>{{ stat.FoldToThreeBet}}</td>
+            <td>{{stat.name}}</td>
+            <td>{{stat.hands}}</td>
+            <td>{{stat.vpip | round(2)}}</td>
+            <td>{{stat.pfr | round(2)}}</td>
+            <td>{{stat.win_rate | round(2)}}</td>
         </tr>
         {% endfor %}
     </tbody>

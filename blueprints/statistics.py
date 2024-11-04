@@ -1,11 +1,18 @@
 from flask import Blueprint, request, jsonify, session, render_template
-from models import get_db_connection, load_hands_from_db
+from models import update_players_statistics, get_players_statistics
 from collections import defaultdict
 import json
 
 statistics_bp = Blueprint('statistics', __name__)
 
-def compute_stats():
+@statistics_bp.route('/')
+def statistics():
+    update_players_statistics()
+    stats = get_players_statistics()
+    return render_template('statistics.html', stats = stats)
+
+
+def OLD_compute_stats(): # UNUSED !! Becuase not efficient. We keep it as reference for now
 
     # Generates a default dict. When calling the fist time stats_data["player"], this will set all the defaults counters for player to zero.
     stats_data = defaultdict(lambda: {
@@ -135,8 +142,3 @@ def compute_stats():
 
     final_stats_sorted = sorted(final_stats, key=lambda x: x["Hands"], reverse=True)
     return final_stats_sorted
-
-@statistics_bp.route('/')
-def statistics():
-    stats = compute_stats()
-    return render_template('statistics.html', stats = stats)

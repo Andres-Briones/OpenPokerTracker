@@ -36,9 +36,11 @@ def init_db():
             CREATE TABLE IF NOT EXISTS players (
                 id INTEGER PRIMARY KEY,
                 name TEXT UNIQUE,
+                hands INTEGER, -- player hands
                 vpip REAL,
                 pfr REAL,
-                win_rate REAL -- We will add more statistics later
+                win_rate REAL -- $/100 hands (incorrect computation for now)
+                -- We will add more statistics later
             );
             CREATE TABLE IF NOT EXISTS players_hands (
                 player_id INTEGER,
@@ -103,8 +105,7 @@ def add_and_link_player(player_name, hand_id, vpip, pfr, won):
 
         #Link player to hand in players_hand table
         cursor.execute("INSERT INTO players_hands (player_id, hand_id, vpip, pfr, won) VALUES (?,?,?,?,?)",
-                       (player_id, hand_id, vpip, pfr, won)
-                       )
+                       (player_id, hand_id, vpip, pfr, won))
 
         conn.commit()
 
@@ -140,14 +141,37 @@ def save_hand_to_db(file_id, ohh_obj):
 def load_hands_from_db():
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM hands ORDER BY date_time DESC")
+        cursor.execute("SELECT id, game_code, date_time, hero_cards FROM hands ORDER BY date_time DESC")
         hands = cursor.fetchall()
-        hands_list = []
-        for hand in hands:
-            hands_list.append({
-                "id": hand["id"],
-                "game_code": hand["game_code"],
-                "date_time": hand["date_time"],
-                "hero_cards": hand["hero_cards"]
-            })
-        return hands_list
+        return hands
+
+# Update player statistics from players_hands table
+def update_players_statistics():
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+        UPDATE players
+        SET hands = result.hands,
+            vpip = result.vpip,
+            pfr = result.pfr,
+            win_rate = result.win_rate
+        FROM (SELECT player_id,
+                     COUNT(player_id) AS hands,
+                     AVG(vpip)*100 AS vpip,
+                     AVG(pfr)*100 AS pfr,
+                     AVG(won)*100 AS win_rate
+              FROM players_hands
+              GROUP BY player_id)
+        AS result
+        WHERE players.id = result.player_id
+        """)
+        conn.commit()
+
+def get_players_statistics():
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT name, hands, vpip, pfr, win_rate from players ORDER BY hands DESC")
+        players_stats = cursor.fetchall()
+        return players_stats
+
+
