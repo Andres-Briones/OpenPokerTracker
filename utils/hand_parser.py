@@ -18,8 +18,10 @@ def parse_hand_stat(ohh_obj):
     hero_id = ohh_data.get("hero_player_id")
     game_code = ohh_data["game_number"]
     date_time = ohh_data["start_date_utc"]
-    hero_cards = ''
+    hero_cards = ""
 
+    if "Anonymous" in ohh_data.get("flags",[]):
+        return {"game_code": game_code}, None
 
     # Extract players and rounds
     players = ohh_data['players']
@@ -47,7 +49,7 @@ def parse_hand_stat(ohh_obj):
                 preflop_participation.add(player_name)
                 #PFR : Preflop first raises or 3-bet, 4-bet, etc
                 if action_type == "Raise":
-                    preflop_raisers.add(player_id)
+                    preflop_raisers.add(player_name)
 
             # Get hero cards
             if player_id  == hero_id and "cards" in action:

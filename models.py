@@ -37,7 +37,7 @@ def init_db():
                 id INTEGER PRIMARY KEY,
                 name TEXT UNIQUE,
                 vpip REAL,
-                pfr REAL, 
+                pfr REAL,
                 win_rate REAL -- We will add more statistics later
             );
             CREATE TABLE IF NOT EXISTS players_hands (
@@ -57,11 +57,39 @@ def init_db():
             print("Database initialization failed:", e)
 
 
+# Add file to database, returns 1 if new file is added, returns 0 if the file is already in the database, returns -1 if error
+def add_file_to_db(filename, file_path):
+    with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # Check if the file already exists in the database
+            cursor.execute("SELECT id FROM files WHERE filename = ?", (filename,))
+            result = cursor.fetchone()
+
+            if result:
+                return False
+
+            # Insert the file record into the database since it doesn't exist
+            cursor.execute("INSERT INTO files (filename) VALUES (?)", (filename,))
+            file_id = cursor.lastrowid
+            conn.commit()
+            new_files_uploaded = True
+
+    # If file is new, read and add hands to the database
+    with open(file_path, 'r') as f:
+        content = f.read()
+
+        hand_sections = [section.strip() for section in content.split('\n\n') if section.strip()]
+        for hand_text in hand_sections:
+            hand_data = json.loads(hand_text)
+            save_hand_to_db(file_id, hand_data)  # Save each hand to the database
+    return True
+
 # Add or update player in the database, returns the id of the player
 def add_and_link_player(player_name, hand_id, vpip, pfr, won):
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        
+
         # Check if player already exists
         cursor.execute("SELECT id FROM players WHERE name = ?", (player_name,))
         player = cursor.fetchone()
@@ -86,6 +114,10 @@ def add_and_link_player(player_name, hand_id, vpip, pfr, won):
 def save_hand_to_db(file_id, ohh_obj):
 
     general_data, stats_data = parse_hand_stat(ohh_obj)
+    if stats_data is None :
+        print(f"Hand {general_data['game_code']} is anonymous, not inserted into the database")
+        return
+
 
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -102,7 +134,7 @@ def save_hand_to_db(file_id, ohh_obj):
     for name in stats_data.keys():
         player_id = add_and_link_player(name, hand_id, **stats_data[name])
         print(f"Hand {general_data['game_code']} was inserted into the database")
-        
+
 
 # Load hands data from database on startup
 def load_hands_from_db():

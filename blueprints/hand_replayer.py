@@ -27,41 +27,20 @@ def upload_hand():
         file_path = upload_path + secure_filename(file.filename)
         file.save(file_path)  # Save file to uploads directory
 
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            
-            # Check if the file already exists in the database
-            cursor.execute("SELECT id FROM files WHERE filename = ?", (file.filename,))
-            result = cursor.fetchone()
-            
-            if result:
-                # File already exists, skip adding hands for this file
-                continue
-            
-            # Insert the file record into the database since it doesn't exist
-            cursor.execute("INSERT INTO files (filename) VALUES (?)", (file.filename,))
-            file_id = cursor.lastrowid
-            conn.commit()
-            new_files_uploaded = True
+        try :
+            if add_file_to_db(file.filename, file_path):
+                new_files_uploaded = True
+        except json.JSONDecodeError as e:
+            print("Error: Invalid JSON format in hand history.")
+            return jsonify({"error": "Invalid JSON format in hand history"}), 400
 
-        # If file is new, read and add hands to the database
-        with open(file_path, 'r') as f:
-            content = f.read()
-
-        hand_sections = [section.strip() for section in content.split('\n\n') if section.strip()]
-        for hand_text in hand_sections:
-            try:
-                hand_data = json.loads(hand_text)
-                save_hand_to_db(file_id, hand_data)  # Save each hand to the database
-            except json.JSONDecodeError as e:
-                print("Error: Invalid JSON format in hand history.")
-                return jsonify({"error": "Invalid JSON format in hand history"}), 400
 
     # Update session hands_list only if new files were uploaded
     if new_files_uploaded:
         session["hands_list"] = load_hands_from_db()
 
     return jsonify({"message": "File uploaded successfully"}), 200
+
 
 
 @hand_replayer_bp.route('/select_hand', methods=['POST'])
