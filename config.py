@@ -8,3 +8,4 @@ class Config:
     SESSION_PERMANENT = False
     SESSION_USE_SIGNER = True
     DB_PATH = os.path.join(Path.home(), ".config/poker/poker.db")
+    UPLOADS_PATH = os.path.join(Path.home(), ".config/poker/uploads/")

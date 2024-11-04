@@ -4,6 +4,7 @@ import sqlite3
 from config import Config
 import os
 import json
+from utils.hand_parser import * 
 
 
 # Database connection helper
@@ -35,14 +36,73 @@ def init_db():
             CREATE TABLE IF NOT EXISTS players (
                 id INTEGER PRIMARY KEY,
                 name TEXT UNIQUE,
-                hands TEXT,  -- JSON array of hand_ids where the player was present
-                statistics TEXT  -- JSON dictionary to store player statistics
+                vpip REAL,
+                pfr REAL, 
+                win_rate REAL -- We will add more statistics later
+            );
+            CREATE TABLE IF NOT EXISTS players_hands (
+                player_id INTEGER,
+                hand_id INTEGER,
+                vpip BOOLEAN,
+                pfr BOOLEAN,
+                won DECIMAL,
+                FOREIGN KEY (player_id) REFERENCES players(id)
+                FOREIGN KEY (hand_id) REFERENCES hands(id)
+            PRIMARY KEY (player_id, hand_id)  -- Ensures each player can participate in each hand only once
             );
             """)
             conn.commit()
             print("Database initialized successfully.")
         except sqlite3.Error as e:
             print("Database initialization failed:", e)
+
+
+# Add or update player in the database, returns the id of the player
+def add_and_link_player(player_name, hand_id, vpip, pfr, won):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        # Check if player already exists
+        cursor.execute("SELECT id FROM players WHERE name = ?", (player_name,))
+        player = cursor.fetchone()
+
+        if player: #Player exists
+            player_id = player["id"]
+        else : # Player does not exist, create a new record
+            cursor.execute("INSERT INTO players (name) VALUES (?)", (player_name,))
+            player_id = cursor.lastrowid
+            conn.commit()
+
+        #Link player to hand in players_hand table
+        cursor.execute("INSERT INTO players_hands (player_id, hand_id, vpip, pfr, won) VALUES (?,?,?,?,?)",
+                       (player_id, hand_id, vpip, pfr, won)
+                       )
+
+        conn.commit()
+
+    return player_id
+
+# Parse and store data in database
+def save_hand_to_db(file_id, ohh_obj):
+
+    general_data, stats_data = parse_hand_stat(ohh_obj)
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+
+        # Insert hand data with full ohh object stored as JSON
+        cursor.execute(
+            "INSERT INTO hands (file_id, game_code, date_time, hero_cards, ohh_data) VALUES (?, ?, ?, ?, ?)",
+            (file_id, general_data['game_code'], general_data['date_time'], general_data['hero_cards'], json.dumps(ohh_obj))
+        )
+        hand_id = cursor.lastrowid
+        conn.commit()
+
+    # Add play if they don’t exist and link to hand
+    for name in stats_data.keys():
+        player_id = add_and_link_player(name, hand_id, **stats_data[name])
+        print(f"Hand {general_data['game_code']} was inserted into the database")
+        
 
 # Load hands data from database on startup
 def load_hands_from_db():
@@ -59,47 +119,3 @@ def load_hands_from_db():
                 "hero_cards": hand["hero_cards"]
             })
         return hands_list
-
-# Add or update player in the database
-def add_or_update_player(player_name, hand_id):
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        
-        # Check if player already exists
-        cursor.execute("SELECT id, hands FROM players WHERE name = ?", (player_name,))
-        result = cursor.fetchone()
-
-        if result:
-            # Player exists, update their list of hands
-            player_id = result["id"]
-            hands = json.loads(result["hands"])
-            if hand_id not in hands:
-                hands.append(hand_id)
-            cursor.execute("UPDATE players SET hands = ? WHERE id = ?", (json.dumps(hands), player_id))
-        else:
-            # Player does not exist, create a new record
-            hands = [hand_id]
-            cursor.execute(
-                "INSERT INTO players (name, hands, statistics) VALUES (?, ?, ?)",
-                (player_name, json.dumps(hands), json.dumps({}))  # Empty statistics dictionary
-            )
-        conn.commit()
-
-# Parse and store data in database
-def save_hand_to_db(file_id, parsed_hand, ohh_data):
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-
-        # Insert hand data with full ohh object stored as JSON
-        cursor.execute(
-            "INSERT INTO hands (file_id, game_code, date_time, hero_cards, ohh_data) VALUES (?, ?, ?, ?, ?)",
-            (file_id, parsed_hand['game_code'], parsed_hand['date_time'], parsed_hand['hero_cards'], json.dumps(ohh_data))
-        )
-        hand_id = cursor.lastrowid
-
-        # Update each player's record or add them if they don’t exist
-        #for player in parsed_hand['players']:
-        #    add_or_update_player(player['name'], hand_id)
-        print(f"Hand {parsed_hand['game_code']} was inserted into the database")
-        
-        conn.commit()

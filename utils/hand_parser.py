@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 def getCardSymbol(card):
     suitSymbols = {
         'h': '♥', 
@@ -9,6 +11,69 @@ def getCardSymbol(card):
 
 def cardsListToString(cards):
     return " ".join([getCardSymbol(card) for card in cards])
+
+def parse_hand_stat(ohh_obj):
+    #Extract general info necessary for hand insertion in table
+    ohh_data = ohh_obj["ohh"]
+    hero_id = ohh_data.get("hero_player_id")
+    game_code = ohh_data["game_number"]
+    date_time = ohh_data["start_date_utc"]
+    hero_cards = ''
+
+
+    # Extract players and rounds
+    players = ohh_data['players']
+    rounds = ohh_data['rounds']
+
+    # Map player IDs to names for easy reference
+    id_to_name = {p['id']: p['name'] for p in players}
+            
+    # Track preflop participation and actions for each player in the hand
+    preflop_participation = set()
+    preflop_raisers = set()
+    game_participation = set()
+
+    for round_data in rounds:
+        street = round_data['street']
+        actions = round_data['actions']
+        for action in actions:
+            player_id = action.get("player_id")
+            player_name = id_to_name.get(player_id)
+            action_type = action.get("action")
+            game_participation.add(player_name)
+
+            # VPIP: Any call or raise action before the flop
+            if street == "Preflop" and action_type in ["Call", "Raise"]:
+                preflop_participation.add(player_name)
+                #PFR : Preflop first raises or 3-bet, 4-bet, etc
+                if action_type == "Raise":
+                    preflop_raisers.add(player_id)
+
+            # Get hero cards
+            if player_id  == hero_id and "cards" in action:
+                hero_cards = cardsListToString(action.get("cards"))
+    
+    # Generate dict to store statistical data for each player 
+    stats_data = defaultdict(lambda: {"vpip": 0, "pfr": 0, "won": 0})
+    for name in game_participation : stats_data[name] # Generate input for player in stats_data if player is not observer
+    for name in preflop_participation : stats_data[name]["vpip"] = 1
+    for name in preflop_raisers : stats_data[name]["pfr"] = 1
+
+    for pot in ohh_data.get("pots"):
+        for win in pot["player_wins"]:
+            name = id_to_name[win["player_id"]]
+            stats_data[name]["won"] = win["win_amount"] #Incorrect for now, need to remove the amount betted and check if we need to sum the cashout amount - fees to it.
+
+    stats_data = dict(stats_data) #Use dict in order to transform the defaultdic object
+
+    # Generate dic for general data
+    general_data = {
+        "game_code" : game_code,
+        "date_time" : date_time,
+        "hero_cards" : hero_cards
+        }
+
+    return general_data, stats_data
 
 def parse_hand(hand_data):
     if "ohh" not in hand_data:

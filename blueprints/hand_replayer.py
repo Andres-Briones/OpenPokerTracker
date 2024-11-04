@@ -1,7 +1,10 @@
-from flask import Blueprint, request, jsonify, session, render_template
+from flask import Blueprint, request, jsonify, session, render_template, current_app
 from models import get_db_connection, load_hands_from_db
 from utils.hand_parser import parse_hand
+from werkzeug.utils import secure_filename
+from models import *
 import json
+import os
 
 hand_replayer_bp = Blueprint('hand_replayer', __name__)
 
@@ -11,13 +14,17 @@ def upload_hand():
         return jsonify({"error": "No file part in the request"}), 400
 
     files = request.files.getlist('file')  # Get all files uploaded as 'file'
+    upload_path = current_app.config["UPLOADS_PATH"]
     new_files_uploaded = False
+
+   # Ensure the upload path exists
+    os.makedirs(upload_path, exist_ok=True)  # Creates the directory if it doesn't exist
 
     for file in files:
         if file.filename == '':
             continue  # Skip empty filenames
 
-        file_path = uploads_dir / secure_filename(file.filename)
+        file_path = upload_path + secure_filename(file.filename)
         file.save(file_path)  # Save file to uploads directory
 
         with get_db_connection() as conn:
@@ -45,8 +52,7 @@ def upload_hand():
         for hand_text in hand_sections:
             try:
                 hand_data = json.loads(hand_text)
-                parsed_hand = parse_hand(hand_data)
-                save_hand_to_db(file_id, parsed_hand, hand_data)  # Save each hand to the database
+                save_hand_to_db(file_id, hand_data)  # Save each hand to the database
             except json.JSONDecodeError as e:
                 print("Error: Invalid JSON format in hand history.")
                 return jsonify({"error": "Invalid JSON format in hand history"}), 400
