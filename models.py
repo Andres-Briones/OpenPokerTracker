@@ -11,7 +11,7 @@ from utils.hand_parser import *
 def get_db_connection():
     db_path = current_app.config['DB_PATH']  # Access the DB_PATH from the config
     conn = sqlite3.connect(db_path, timeout=10)
-    conn.row_factory = sqlite3.Row
+    conn.row_factory = lambda cursor, row: {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
     return conn
 
 def init_db():
