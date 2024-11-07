@@ -23,20 +23,21 @@ def upload_hand():
     for file in files:
         if file.filename == '':
             continue  # Skip empty filenames
+        if file.filename[-4:] != ".OHH":
+            print(f"File {file.filename} skipped, it's not an OHH file")
 
         file_path = upload_path + secure_filename(file.filename)
         file.save(file_path)  # Save file to uploads directory
 
-        try :
-            if add_file_to_db(file.filename, file_path):
-                new_files_uploaded = True
-        except json.JSONDecodeError as e:
-            print("Error: Invalid JSON format in hand history.")
-            return jsonify({"error": "Invalid JSON format in hand history"}), 400
+        if add_file_to_db(file.filename, file_path):
+            new_files_uploaded = True
+        else :
+            print(f"File {file.filename} arleady exists in the database")
 
 
     # Update session hands_list only if new files were uploaded
     if new_files_uploaded:
+        print(f"Working on file {file.filename} ...")
         session["hands_list"] = load_hands_from_db()
 
     return jsonify({"message": "File uploaded successfully"}), 200

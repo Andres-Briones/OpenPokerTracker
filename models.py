@@ -116,7 +116,7 @@ def save_hand_to_db(file_id, ohh_obj):
 
     general_data, stats_data = parse_hand_stat(ohh_obj)
     if stats_data is None :
-        print(f"Hand {general_data['game_code']} is anonymous, not inserted into the database")
+        print(f"  Hand {general_data['game_code']} is anonymous, not inserted into the database")
         return
 
 
@@ -134,7 +134,7 @@ def save_hand_to_db(file_id, ohh_obj):
     # Add play if they don’t exist and link to hand
     for name in stats_data.keys():
         player_id = add_and_link_player(name, hand_id, **stats_data[name])
-        print(f"Hand {general_data['game_code']} was inserted into the database")
+        #print(f"  Hand {general_data['game_code']} was inserted into the database")
 
 
 # Load hands data from database on startup
