@@ -8,13 +8,13 @@ from utils.hand_parser import *
 
 
 # Database connection helper
-def get_db_connection(db_path = current_app.config['DB_PATH'], timeout = 10):
+def get_db_connection(db_path, timeout = 10):
     conn = sqlite3.connect(db_path, timeout=timeout)
     conn.row_factory = lambda cursor, row: {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
     return conn
 
-def init_db():
-    with get_db_connection() as conn:
+def init_db(db_path):
+    with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
         try:
             cursor.executescript("""
@@ -59,8 +59,8 @@ def init_db():
 
 
 # Add file to database, returns 1 if new file is added, returns 0 if the file is already in the database, returns -1 if error
-def add_file_to_db(filename, file_path):
-    with get_db_connection() as conn:
+def add_file_to_db(filename, file_path, db_path):
+    with get_db_connection(db_path) as conn:
             cursor = conn.cursor()
 
             # Check if the file already exists in the database
@@ -77,21 +77,21 @@ def add_file_to_db(filename, file_path):
 
     return file_id
 
-def add_hands_from_file_to_db(file_path, file_id):
+def add_hands_from_file_to_db(file_path, file_id, db_path):
     with open(file_path, 'r') as f:
         content = f.read()
         hand_sections = [section.strip() for section in content.split('\n\n') if section.strip()]
         for hand_text in hand_sections:
             hand_data = json.loads(hand_text)
-            save_hand_to_db(file_id, hand_data)  # Save each hand to the database
+            save_hand_to_db(file_id, hand_data, db_path)  # Save each hand to the database
     return
 
 
 
 
 # Add or update player in the database, returns the id of the player
-def add_and_link_player(player_name, hand_id, vpip, pfr, won):
-    with get_db_connection() as conn:
+def add_and_link_player(player_name, hand_id, vpip, pfr, won, db_path):
+    with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
 
         # Check if player already exists
@@ -114,7 +114,7 @@ def add_and_link_player(player_name, hand_id, vpip, pfr, won):
     return player_id
 
 # Parse and store data in database
-def save_hand_to_db(file_id, ohh_obj):
+def save_hand_to_db(file_id, ohh_obj, db_path):
 
     general_data, stats_data = parse_hand_stat(ohh_obj)
     if stats_data is None :
@@ -122,7 +122,7 @@ def save_hand_to_db(file_id, ohh_obj):
         return
 
 
-    with get_db_connection() as conn:
+    with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
 
         # Insert hand data with full ohh object stored as JSON
@@ -135,21 +135,21 @@ def save_hand_to_db(file_id, ohh_obj):
 
     # Add play if they don’t exist and link to hand
     for name in stats_data.keys():
-        player_id = add_and_link_player(name, hand_id, **stats_data[name])
+        player_id = add_and_link_player(name, hand_id, **stats_data[name], db_path= db_path)
         #print(f"  Hand {general_data['game_code']} was inserted into the database")
 
 
 # Load hands data from database on startup
-def load_hands_from_db():
-    with get_db_connection() as conn:
+def load_hands_from_db(db_path):
+    with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT id, game_code, date_time, hero_cards FROM hands ORDER BY date_time DESC")
         hands = cursor.fetchall()
         return hands
 
 # Update player statistics from players_hands table
-def update_players_statistics():
-    with get_db_connection() as conn:
+def update_players_statistics(db_path):
+    with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
         cursor.execute("""
         UPDATE players
@@ -169,8 +169,8 @@ def update_players_statistics():
         """)
         conn.commit()
 
-def get_players_statistics():
-    with get_db_connection() as conn:
+def get_players_statistics(db_path):
+    with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT name, hands, vpip, pfr, win_rate from players ORDER BY hands DESC")
         players_stats = cursor.fetchall()

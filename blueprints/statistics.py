@@ -7,8 +7,8 @@ statistics_bp = Blueprint('statistics', __name__)
 
 @statistics_bp.route('/')
 def statistics():
-    update_players_statistics()
-    stats = get_players_statistics()
+    update_players_statistics(session["db_path"])
+    stats = get_players_statistics(session["db_path"])
     return render_template('statistics.html', stats = stats)
 
 

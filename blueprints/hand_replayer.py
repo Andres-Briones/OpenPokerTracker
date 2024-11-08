@@ -3,7 +3,7 @@ from models import get_db_connection, load_hands_from_db
 from utils.hand_parser import parse_hand
 from werkzeug.utils import secure_filename
 import time
-from models import *
+import models
 import json
 import os
 
@@ -32,19 +32,19 @@ def upload_hand():
         file_path = upload_path + secure_filename(file.filename)
         file.save(file_path)  # Save file to uploads directory
 
-        file_id  = add_file_to_db(file.filename, file_path) # returns None if file already exists on database
+        file_id  = models.add_file_to_db(file.filename, file_path, session["db_path"]) # returns None if file already exists on database
         if file_id is not None:
             new_files_uploaded = True
             print(f"Working on file {file.filename} ... ")
             start_time = time.time()
-            add_hands_from_file_to_db(file_path, file_id)
+            models.add_hands_from_file_to_db(file_path, file_id, session["db_path"])
             print(f"done! It took {(time.time()-start_time):.2f} seconds. ({num+1}/{len_files})")
         else :
             print(f"File {file.filename} arleady exists in the database. ({num+1}/{len_files})")
 
     # Update session hands_list only if new files were uploaded
     if new_files_uploaded:
-        session["hands_list"] = load_hands_from_db()
+        session["hands_list"] = models.load_hands_from_db(db_path= session["db_path"])
 
     return jsonify({"message": "Files uploaded successfully"}), 200
 
@@ -56,7 +56,7 @@ def select_hand():
     
     print(selected_index)
     # Retrieve the full ohh_data from the database for the selected hand
-    with get_db_connection() as conn:
+    with get_db_connection(session["db_path"]) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT ohh_data FROM hands WHERE id=?", (selected_index,))
         result = cursor.fetchone()
@@ -77,7 +77,7 @@ def select_hand():
 def get_hands_list():
     if 'hands_list' not in session:
         # Load from the database only if 'hands_list' is not in session
-        session['hands_list'] = load_hands_from_db()
+        session['hands_list'] = utils.load_hands_from_db(db_path = session["db_path"])
     return jsonify({"hands_list": session['hands_list']})
 
 
