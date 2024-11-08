@@ -67,25 +67,28 @@ def add_file_to_db(filename, file_path):
             # Check if the file already exists in the database
             cursor.execute("SELECT id FROM files WHERE filename = ?", (filename,))
             result = cursor.fetchone()
-
+            
             if result:
-                return False
+                return None
 
             # Insert the file record into the database since it doesn't exist
             cursor.execute("INSERT INTO files (filename) VALUES (?)", (filename,))
             file_id = cursor.lastrowid
             conn.commit()
-            new_files_uploaded = True
 
-    # If file is new, read and add hands to the database
+    return file_id
+
+def add_hands_from_file_to_db(file_path, file_id):
     with open(file_path, 'r') as f:
         content = f.read()
-
         hand_sections = [section.strip() for section in content.split('\n\n') if section.strip()]
         for hand_text in hand_sections:
             hand_data = json.loads(hand_text)
             save_hand_to_db(file_id, hand_data)  # Save each hand to the database
-    return True
+    return
+
+
+
 
 # Add or update player in the database, returns the id of the player
 def add_and_link_player(player_name, hand_id, vpip, pfr, won):

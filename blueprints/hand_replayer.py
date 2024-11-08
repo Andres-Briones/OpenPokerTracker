@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, session, render_template, current
 from models import get_db_connection, load_hands_from_db
 from utils.hand_parser import parse_hand
 from werkzeug.utils import secure_filename
+import time
 from models import *
 import json
 import os
@@ -14,33 +15,38 @@ def upload_hand():
         return jsonify({"error": "No file part in the request"}), 400
 
     files = request.files.getlist('file')  # Get all files uploaded as 'file'
+    len_files = len(files)
     upload_path = current_app.config["UPLOADS_PATH"]
     new_files_uploaded = False
 
    # Ensure the upload path exists
     os.makedirs(upload_path, exist_ok=True)  # Creates the directory if it doesn't exist
 
-    for file in files:
+    for num, file in enumerate(files):
         if file.filename == '':
             continue  # Skip empty filenames
         if file.filename[-4:] != ".OHH":
-            print(f"File {file.filename} skipped, it's not an OHH file")
+            print(f"File {file.filename} skipped, it's not an OHH file. ({num+1}/{len_files})")
+            continue
 
         file_path = upload_path + secure_filename(file.filename)
         file.save(file_path)  # Save file to uploads directory
 
-        if add_file_to_db(file.filename, file_path):
+        file_id  = add_file_to_db(file.filename, file_path) # returns None if file already exists on database
+        if file_id is not None:
             new_files_uploaded = True
+            print(f"Working on file {file.filename} ... ")
+            start_time = time.time()
+            add_hands_from_file_to_db(file_path, file_id)
+            print(f"done! It took {(time.time()-start_time):.2f} seconds. ({num+1}/{len_files})")
         else :
-            print(f"File {file.filename} arleady exists in the database")
-
+            print(f"File {file.filename} arleady exists in the database. ({num+1}/{len_files})")
 
     # Update session hands_list only if new files were uploaded
     if new_files_uploaded:
-        print(f"Working on file {file.filename} ...")
         session["hands_list"] = load_hands_from_db()
 
-    return jsonify({"message": "File uploaded successfully"}), 200
+    return jsonify({"message": "Files uploaded successfully"}), 200
 
 
 

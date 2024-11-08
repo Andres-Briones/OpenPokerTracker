@@ -61,10 +61,11 @@ def parse_hand_stat(ohh_obj):
     for name in preflop_participation : stats_data[name]["vpip"] = 1
     for name in preflop_raisers : stats_data[name]["pfr"] = 1
 
-    for pot in ohh_data.get("pots"):
-        for win in pot["player_wins"]:
-            name = id_to_name[win["player_id"]]
-            stats_data[name]["won"] = win["win_amount"] #Incorrect for now, need to remove the amount betted and check if we need to sum the cashout amount - fees to it.
+    for player in players :
+        win_amount = float(player.get("final_stack", 0)) - float(player["starting_stack"])
+        if win_amount != 0 : 
+            name = player["name"]
+            stats_data[name]["won"] = '%g' % win_amount
 
     stats_data = dict(stats_data) #Use dict in order to transform the defaultdic object
 
@@ -95,7 +96,7 @@ def parse_hand(hand_data):
                 "starting_stack": player["starting_stack"],
                 "cards": "? ?",
                 "status": "Active",
-                "chips": player["starting_stack"]
+                "chips": float(player["starting_stack"])
             }
             for player in ohh_data["players"]
         ],
@@ -134,7 +135,7 @@ def parse_hand(hand_data):
                 hero_cards = cardsListToString(action["cards"])
 
             # Generate a description for the action
-            action_amount = action.get('amount',0)
+            action_amount = float(action.get('amount',0))
             if action_amount == 0:
                 action_description = f"{players[action['player_id']]['name']}: {action['action']}"
             else :
@@ -156,7 +157,7 @@ def parse_hand(hand_data):
                     "status": player["status"],
                     "actual_bet": player["actual_bet"],
                     "cards": player["cards"],
-                    "chips": player["chips"]
+                    "chips": float(player["chips"])
                 }
 
                 # Apply the current action to the relevant player
@@ -190,14 +191,14 @@ def parse_hand(hand_data):
     if "pots" in ohh_data:
         parsed_data["pot_info"] = [
             {
-                "rake": pot["rake"],
-                "amount": pot["amount"],
+                "rake": float(pot["rake"]),
+                "amount": float(pot["amount"]),
                 "player_wins": [
                     {
                         "name": players[win["player_id"]]["name"],
-                        "win_amount": win["win_amount"],
-                        "cashout_fee": win.get("cashout_fee", 0.00),
-                        "cashout_amount": win.get("cashout_amount", win["win_amount"])
+                        "win_amount": float(win["win_amount"]),
+                        "cashout_fee": float(win.get("cashout_fee", 0.00)),
+                        "cashout_amount": float(win.get("cashout_amount", win["win_amount"]))
                     }
                     for win in pot["player_wins"]
                 ]

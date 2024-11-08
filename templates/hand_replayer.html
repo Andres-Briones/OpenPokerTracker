@@ -128,9 +128,9 @@ async function uploadFile() {
         const response = await fetch('upload', { method: 'POST', body: formData });
         const data = await response.json();
 
-        if (data.message === "File uploaded successfully") {
+        alert(data.message)
+        if (data.message === "Files uploaded successfully") {
             await loadHandsList();  // Refresh hands list after successful upload
-            alert("Files uploaded successfully!");
         } else {
             alert("Error uploading files: " + data.error);
         }
