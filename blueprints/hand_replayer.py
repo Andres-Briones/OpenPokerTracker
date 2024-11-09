@@ -10,7 +10,7 @@ import os
 hand_replayer_bp = Blueprint('hand_replayer', __name__)
 
 @hand_replayer_bp.route('/upload', methods=['POST'])
-def upload_hand():
+def upload_files():
     if 'file' not in request.files:
         return jsonify({"error": "No file part in the request"}), 400
 
@@ -33,21 +33,21 @@ def upload_hand():
         file.save(file_path)  # Save file to uploads directory
 
         file_id  = models.add_file_to_db(file.filename, file_path, session["db_path"]) # returns None if file already exists on database
-        if file_id is not None:
-            new_files_uploaded = True
-            print(f"Working on file {file.filename} ... ")
-            start_time = time.time()
-            models.add_hands_from_file_to_db(file_path, file_id, session["db_path"])
-            print(f"done! It took {(time.time()-start_time):.2f} seconds. ({num+1}/{len_files})")
-        else :
+
+        if file_id is None:
             print(f"File {file.filename} arleady exists in the database. ({num+1}/{len_files})")
+        else :
+            with open(file_path, 'r') as f:
+                hand_data_list = [json.loads(hand.strip()) for hand in f.read().split('\n\n') if hand.strip()]
+                models.save_hands_bulk(file_id, hand_data_list, current_app.config['DB_PATH'])
+            new_files_uploaded = True
+            print(f"File {file.filename} was uploaded. ({num+1}/{len_files})")
 
     # Update session hands_list only if new files were uploaded
     if new_files_uploaded:
         session["hands_list"] = models.load_hands_from_db(db_path= session["db_path"])
 
     return jsonify({"message": "Files uploaded successfully"}), 200
-
 
 
 @hand_replayer_bp.route('/select_hand', methods=['POST'])
@@ -82,4 +82,5 @@ def get_hands_list():
 
 @hand_replayer_bp.route('/')
 def hand_replayer():
+    session["db_path"] = current_app.config['DB_PATH']
     return render_template('hand_replayer.html')
