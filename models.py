@@ -8,7 +8,7 @@ from utils.hand_parser import *
 
 
 # Database connection helper
-def get_db_connection(db_path, timeout = 10):
+def get_db_connection(db_path, timeout = 0):
     conn = sqlite3.connect(db_path, timeout=timeout)
     conn.row_factory = lambda cursor, row: {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
     return conn

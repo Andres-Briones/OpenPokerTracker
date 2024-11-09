@@ -53,8 +53,7 @@ def upload_hand():
 @hand_replayer_bp.route('/select_hand', methods=['POST'])
 def select_hand():
     selected_index = request.json.get('hand_index')
-    
-    print(selected_index)
+
     # Retrieve the full ohh_data from the database for the selected hand
     with get_db_connection(session["db_path"]) as conn:
         cursor = conn.cursor()
@@ -77,7 +76,7 @@ def select_hand():
 def get_hands_list():
     if 'hands_list' not in session:
         # Load from the database only if 'hands_list' is not in session
-        session['hands_list'] = utils.load_hands_from_db(db_path = session["db_path"])
+        session['hands_list'] = load_hands_from_db(db_path = session["db_path"])
     return jsonify({"hands_list": session['hands_list']})
 
 

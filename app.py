@@ -14,14 +14,15 @@ def create_app():
     app.register_blueprint(hand_replayer_bp, url_prefix='/replayer')
     app.register_blueprint(statistics_bp, url_prefix='/statistics')
 
+    # Custom startup function
+    with app.app_context():
+        init_db(current_app.config["DB_PATH"])
+
     # Define the root route
     @app.route('/')
     def index():
+        session["db_path"] = current_app.config['DB_PATH']
         return render_template('index.html')
 
-    @app.before_request
-    def setup_session():
-        session["db_path"] = current_app.config['DB_PATH']
-        init_db(session["db_path"])
-
     return app
+
