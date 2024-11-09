@@ -14,6 +14,18 @@ def get_db_connection(db_path, timeout = 0):
     conn.row_factory = lambda cursor, row: {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
     return conn
 
+def list_databases(db_directory):
+    """Returns a list of available databases in the specified directory."""
+    db_files = os.listdir(db_directory)
+    return [db for db in db_files if db.endswith('.db')]
+
+def create_database(db_name, db_directory):
+    """Creates a new database with the given name in the specified directory."""
+    db_path = os.path.join(db_directory, f"{db_name}.db")
+    if not os.path.exists(db_path):
+        init_db(db_path)  # Initialize with the standard schema
+    return db_path
+
 def init_db(db_path):
     """Initializes the database with necessary tables."""
     with get_db_connection(db_path) as conn:
@@ -207,3 +219,4 @@ def full_update_players_hands(db_path):
                                (vpip, pfr , won, player_id, hand["id"]))
 
         conn.commit()
+

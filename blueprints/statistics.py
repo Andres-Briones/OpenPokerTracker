@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, session, render_template, current_app
+from flask import Blueprint, request, jsonify, session, render_template, current_app, redirect
 from models import update_players_statistics, get_players_statistics
 from collections import defaultdict
 import json
@@ -7,7 +7,9 @@ statistics_bp = Blueprint('statistics', __name__)
 
 @statistics_bp.route('/')
 def statistics():
-    session["db_path"] = current_app.config['DB_PATH']
+    db_path = session.get("db_path", None)
+    if db_path is None : return redirect('/')
+
     update_players_statistics(session["db_path"])
     stats = get_players_statistics(session["db_path"])
     return render_template('statistics.html', stats = stats)

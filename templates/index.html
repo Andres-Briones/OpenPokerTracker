@@ -1,15 +1,31 @@
 <!-- templates/index.html -->
 {% extends "base.html" %}
 
-{% block title %}Welcome to Poker App{% endblock %}
+{% block title %}Welcome to OpenHandTracker App{% endblock %}
 
 {% block content %}
-<h2>Welcome to the Poker Hand Replayer!</h2>
+<h2>Welcome to the OpenHandTracker!</h2>
 <p>This app allows you to analyze and replay poker hands, as well as view detailed statistics.</p>
 
-<!-- Navigation links to other sections -->
-<ul>
-    <li><a href="{{ url_for('hand_replayer.hand_replayer') }}">Go to Hand Replayer</a></li>
-    <li><a href="{{ url_for('statistics.statistics') }}">View Statistics</a></li>
-</ul>
+<!-- Form to create a new database -->
+<form action="create_database" method="post">
+    <label for="new_db_name">Create New Database:</label>
+    <input type="text" name="db_name" id="new_db_name" required>
+    <button type="submit">Create Database</button>
+</form>
+
+<!-- Form to select a database and view hands -->
+<section>
+    <h2>Select Database</h2>
+    <form action="select_database" method="post">
+        <label for="database">Choose Database:</label>
+        <select id="database" name="database">
+            {% for db in databases %}
+                <option value="{{ db }}">{{ db }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Load Hands</button>
+    </form>
+</section>
+
 {% endblock %}
