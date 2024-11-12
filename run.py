@@ -10,5 +10,5 @@ def open_browser():
 
 if __name__ == '__main__':
    # Start the browser after a short delay to ensure the server is running
-    Timer(1, open_browser).start()
+   # Timer(1, open_browser).start()
     app.run(debug=True)

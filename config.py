@@ -1,16 +1,17 @@
 import os
 from pathlib import Path
 
-config_path  =  ".config/OpenHandTracker" #Change this path if you want the data to be stored elsewhere
+config_path  =  ".config/OpenHandTracker" #Change this path if you want the configs to be stored elsewhere
+data_path  =  "OpenHandTracker" #Change this path if you want the data to be stored elsewhere
 
 class Config:
     SECRET_KEY = 'sdfp2q984hgaelcan'
     SESSION_TYPE = 'filesystem'
-    SESSION_FILE_DIR = os.path.join(Path.home(), config_path, "sessions")
+    SESSION_FILE_DIR = os.path.join(Path.home(), data_path, "sessions")
     SESSION_PERMANENT = True
     SESSION_USE_SIGNER = True
-    UPLOADS_PATH = os.path.join(Path.home(), config_path, "uploads/")
-    DB_DIRECTORY = os.path.join(Path.home(), config_path, "databases/")
+    UPLOADS_PATH = os.path.join(Path.home(), data_path, "uploads/")
+    DB_DIRECTORY = os.path.join(Path.home(), data_path, "databases/")
 
 
     # Ensure all directories exist

@@ -75,11 +75,13 @@ h2 {
 }
 
 /* Main Container for Flex Layout */
-#mainContainer {
+.mainContainer {
     display: flex;
+    flex-direction: row;
     align-items: flex-start;
     width: 100%;
     gap: 100px;
+    justify-content: center;
 }
 
 /* Sidebar Styling */
@@ -90,8 +92,9 @@ h2 {
     width: 400px;
 }
 
-/* Hands Menu Styling */
-#handsMenu {
+.selection {
+    display:flex;
+    flex-direction: column;
     width: 100%;
     background-color: white;
     padding: 15px;
@@ -99,9 +102,10 @@ h2 {
     box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
     text-align: left;
     margin-bottom: 20px;
+    align-items: center;
 }
 
-#handsMenu h3 {
+.selection h3 {
     color: #2c3e50;
     font-size: 20px;
     margin-bottom: 10px;
@@ -109,7 +113,7 @@ h2 {
 }
 
 /* Dropdown Styling */
-#handSelect {
+.dropDown {
     width: 100%;
     max-height: 200px; /* Limits height with scrolling */
     padding: 8px;
@@ -125,29 +129,29 @@ h2 {
 }
 
 /* Hover and Focus Effects for Dropdown */
-#handSelect:hover, #handSelect:focus {
+.dropDown:hover, #handSelect:focus {
     border-color: #3498db;
     box-shadow: 0px 0px 4px rgba(52, 152, 219, 0.3);
 }
 
-#handSelect option {
+.dropDown option {
     padding: 8px;
     color: #333;
     background-color: #f9fbfc;
     border-bottom: 1px solid #eee;
 }
 
-#handSelect option:hover {
+.dropDown option:hover {
     background-color: #3498db;
     color: white;
 }
 
-#handSelect option:checked {
+.dropDown option:checked {
     background-color: #2980b9;
     color: white;
 }
 
-#handSelect {
+.dropDown {
     width: 100%;
     max-height: 500px; /* Enables scrolling for the dropdown */
     overflow-y: auto;
@@ -301,6 +305,12 @@ th {
 
 /* Navigation Button Styles */
 .navigation-buttons {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.loadDelete-buttons {
     display: flex;
     justify-content: center;
     margin-bottom: 20px;

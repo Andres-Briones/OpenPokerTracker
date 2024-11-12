@@ -17,14 +17,9 @@ def get_db_connection(db_path, timeout = 0):
 def list_databases(db_directory):
     """Returns a list of available databases in the specified directory."""
     db_files = os.listdir(db_directory)
-    return [db for db in db_files if db.endswith('.db')]
+    return [db[:-3] for db in db_files if db.endswith('.db')]
 
-def create_database(db_name, db_directory):
-    """Creates a new database with the given name in the specified directory."""
-    db_path = os.path.join(db_directory, f"{db_name}.db")
-    if not os.path.exists(db_path):
-        init_db(db_path)  # Initialize with the standard schema
-    return db_path
+
 
 def init_db(db_path):
     """Initializes the database with necessary tables."""
@@ -40,7 +35,7 @@ def init_db(db_path):
             CREATE TABLE IF NOT EXISTS hands (
                 id INTEGER PRIMARY KEY,
                 file_id INTEGER,
-                game_code TEXT,
+                game_number TEXT,
                 date_time TEXT,
                 hero_cards TEXT,
                 ohh_data TEXT,  -- JSON blob to store the full ohh object
@@ -94,17 +89,20 @@ def add_file_to_db(filename, file_path, db_path):
 def save_hands_bulk(file_id, hand_data_list, db_path):
     """Inserts multiple hands and associated player data in a single transaction."""
     hands_data = []
-    players_data = {}
+    hands_stats = []
+    players = set()
     players_hands_data = []
 
     # Collect data for all hands and players in the batch
     for hand_data in hand_data_list:
         general_data, stats_data = parse_hand_stat(hand_data)
         if stats_data is None:
+            print("Warning: stats_data is None for hand:", general_data["game_number"])
             continue  # Skip anonymous hands
 
         # Prepare hand data for bulk insert into `hands` table
-        hands_data.append((file_id, general_data['game_code'], general_data['date_time'], general_data['hero_cards'], json.dumps(hand_data)))
+        hands_data.append((file_id, general_data['game_number'], general_data['date_time'], general_data['hero_cards'], json.dumps(hand_data)))
+        hands_stats.append(stats_data)
 
     with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
@@ -115,7 +113,7 @@ def save_hands_bulk(file_id, hand_data_list, db_path):
 
         # Insert all hands in bulk
         cursor.executemany(
-            "INSERT INTO hands (file_id, game_code, date_time, hero_cards, ohh_data) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO hands (file_id, game_number, date_time, hero_cards, ohh_data) VALUES (?, ?, ?, ?, ?)",
             hands_data
         )
         conn.commit()
@@ -124,27 +122,25 @@ def save_hands_bulk(file_id, hand_data_list, db_path):
         hand_ids = range(max_id + 1, max_id + 1 + len(hands_data))
 
         # Build the player and player-hand link data with unique hand_ids
-        for hand_id, hand_data in zip(hand_ids, hand_data_list):
-            _, stats_data = parse_hand_stat(hand_data)
-            for player, stats in stats_data.items():
-                if player not in players_data:
-                    players_data[player] = None  # Placeholder for `players` table entry
-
-                players_hands_data.append((player, hand_id, stats['vpip'], stats['pfr'], stats['won']))
+        for hand_id, players_stats in zip(hand_ids, hands_stats):
+            for name, stats in players_stats.items():
+                players_hands_data.append((name, hand_id, stats['vpip'], stats['pfr'], stats['won']))
+                players.add(name) # Add player name to players (it's a set so there will be only one entry per player)
 
         # Retrieve or insert players and build unique `players_hands` data
-        for player in players_data.keys():
-            cursor.execute("SELECT id FROM players WHERE name = ?", (player,))
+        name_to_id = {}
+        for name in players:
+            cursor.execute("SELECT id FROM players WHERE name = ?", (name,))
             result = cursor.fetchone()
             if result:
-                players_data[player] = result["id"]  # Existing player ID
+                name_to_id[name] = result["id"]  # Existing player ID
             else:
-                cursor.execute("INSERT INTO players (name) VALUES (?)", (player,))
-                players_data[player] = cursor.lastrowid  # New player ID
+                cursor.execute("INSERT INTO players (name) VALUES (?)", (name,))
+                name_to_id[name] = cursor.lastrowid  # New player ID
 
         # Prepare `players_hands` data with actual player IDs and unique hand IDs
         players_hands_insert_data = [
-            (players_data[player], hand_id, vpip, pfr, won)
+            (name_to_id[player], hand_id, vpip, pfr, won)
             for player, hand_id, vpip, pfr, won in players_hands_data
         ]
 
@@ -161,7 +157,7 @@ def load_hands_from_db(db_path):
     """Loads all hands from the database for display or analysis."""
     with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, game_code, date_time, hero_cards FROM hands ORDER BY date_time DESC")
+        cursor.execute("SELECT id, game_number, date_time, hero_cards FROM hands ORDER BY date_time DESC")
         hands = cursor.fetchall()
         return hands
 

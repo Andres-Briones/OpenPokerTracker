@@ -6,12 +6,12 @@
 <h2>Poker Hand Replayer</h2>
 
 <!-- Flex Container for Main Content -->
-<div id="mainContainer">
+<div class="mainContainer">
     <!-- Left Sidebar for Upload and Hands Menu -->
     <div id="sidebar">
-        <div id="handsMenu" style="display: true;">
+        <div class = "selection" id = "handsMenu" style="display: true;">
             <h3>Select a Hand</h3>
-            <select id="handSelect" onchange="selectHand()" size="20">
+            <select class ="dropDown" id="handSelect" onchange="selectHand()" size="20">
                 <option value="">-- No hands available --</option> <!-- Initial placeholder -->
             </select>
         </div>
@@ -101,7 +101,7 @@ function populateHandsMenu(handsList) {
     handsList.forEach((hand, index) => {
         const option = document.createElement('option');
         option.value = hand.id;
-        option.textContent = `${hand.hero_cards ? hand.hero_cards : '? ?' }, ${hand.date_time}, ${hand.game_code}`;
+        option.textContent = `${hand.hero_cards ? hand.hero_cards : '? ?' } |  ${hand.date_time} |  ${hand.game_number}`;
         handSelect.appendChild(option);
     });
 }

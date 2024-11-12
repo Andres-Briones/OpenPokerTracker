@@ -1,31 +1,106 @@
+
 <!-- templates/index.html -->
 {% extends "base.html" %}
 
-{% block title %}Welcome to OpenHandTracker App{% endblock %}
+{% block title %}OpenHandTracker{% endblock %}
 
 {% block content %}
-<h2>Welcome to the OpenHandTracker!</h2>
-<p>This app allows you to analyze and replay poker hands, as well as view detailed statistics.</p>
 
-<!-- Form to create a new database -->
-<form action="create_database" method="post">
-    <label for="new_db_name">Create New Database:</label>
-    <input type="text" name="db_name" id="new_db_name" required>
-    <button type="submit">Create Database</button>
-</form>
-
-<!-- Form to select a database and view hands -->
-<section>
-    <h2>Select Database</h2>
-    <form action="select_database" method="post">
-        <label for="database">Choose Database:</label>
-        <select id="database" name="database">
-            {% for db in databases %}
+<h2>Databases managment</h3>
+    
+    <div class="mainContainer">
+        <!-- List of Existing Databases -->
+        <div class ="selection", style ="max-width : 600px;">
+            <h3>Available Databases</h3>
+            <select class="dropDown" id="DBSelect", size ="5">
+                {% for db in databases %}
                 <option value="{{ db }}">{{ db }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit">Load Hands</button>
-    </form>
-</section>
+                {% endfor %}
+            </select>
+            <div id="loadDelete-Buttons">
+                <form id="loadForm" action="load_database" method="post" style="display:inline;">
+                    <input type="hidden" id="loadDB" name="db_name">
+                    <button type="button" onclick="submitActionForm('load')">Load</button>
+                </form>
+                <form id="deleteForm" action="delete_database" method="post" style="display:inline;">
+                    <input type="hidden" id="deleteDB" name="db_name">
+                    <button type="button" onclick="submitActionForm('delete')">Delete</button>
+                </form>
+            </div>
+            <div>
+                <form action="create_database" method="post">
+                    <label for="new_db_name">New Database:</label>
+                    <input type="text" name="db_name" id="new_db_name" required>
+                    <button type="submit">Create</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+<script>
+// JavaScript function to update and submit the form
+
+
+function submitActionForm(action) {
+    const selectedDB = document.getElementById("DBSelect").value;
+    
+    if (action === 'load') {
+        document.getElementById("loadDB").value = selectedDB;
+        ajaxSubmit(document.getElementById("loadForm"));
+    } else if (action === 'delete') {
+        document.getElementById("deleteDB").value = selectedDB;
+        ajaxSubmit(document.getElementById("deleteForm"));
+    }
+}
+function ajaxSubmit(eventOrForm) {
+    // Determine if the function was called as an event handler or directly
+    const form = eventOrForm instanceof Event ? this : eventOrForm;
+
+    // Prevent default submission if called as an event
+    if (eventOrForm instanceof Event) {
+        eventOrForm.preventDefault();
+    }
+
+    // Serialize form data
+    const formData = new URLSearchParams(new FormData(form)).toString();
+
+    fetch(form.action, {
+        method: form.method,
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || "An unknown error occurred");
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert("Operation completed successfully!");
+            form.reset(); // Reset the form after successful submission
+        } else if (data.redirect) {
+            window.location.href = data.redirect; // Redirect if specified
+        }
+    })
+    .catch(error => {
+        alert(error.message); // Display error in an alert
+    });
+}
+
+// Attach `ajaxSubmit` to all forms on the page
+document.addEventListener("DOMContentLoaded", function() {
+    const forms = document.querySelectorAll("form"); // Select all forms
+    forms.forEach(form => {
+        form.addEventListener("submit", ajaxSubmit.bind(form)); // Bind `ajaxSubmit` to each form
+    });
+});
+
+</script>
 
 {% endblock %}
+

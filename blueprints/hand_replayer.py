@@ -12,7 +12,6 @@ hand_replayer_bp = Blueprint('hand_replayer', __name__)
 @hand_replayer_bp.route('/')
 def hand_replayer():
     db_path = session.get("db_path", None)
-    print(db_path)
     if db_path is None : return redirect('/')
     return render_template('hand_replayer.html')
 

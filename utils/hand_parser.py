@@ -16,12 +16,12 @@ def parse_hand_stat(ohh_obj):
     #Extract general info necessary for hand insertion in table
     ohh_data = ohh_obj["ohh"]
     hero_id = ohh_data.get("hero_player_id")
-    game_code = ohh_data["game_number"]
+    game_number = ohh_data["game_number"]
     date_time = ohh_data["start_date_utc"]
     hero_cards = ""
 
     if "Anonymous" in ohh_data.get("flags",[]):
-        return {"game_code": game_code}, None
+        return {"game_number": game_number}, None
 
     # Extract players and rounds
     players = ohh_data['players']
@@ -71,7 +71,7 @@ def parse_hand_stat(ohh_obj):
 
     # Generate dic for general data
     general_data = {
-        "game_code" : game_code,
+        "game_number" : game_number,
         "date_time" : date_time,
         "hero_cards" : hero_cards
         }
@@ -208,7 +208,7 @@ def parse_hand(hand_data):
 
     parsed_data["game_state_table"] = game_state_table
 
-    parsed_data["game_code"] = ohh_data["game_number"]
+    parsed_data["game_number"] = ohh_data["game_number"]
     parsed_data["date_time"] = ohh_data["start_date_utc"]
     parsed_data["hero_cards"] = hero_cards 
 
