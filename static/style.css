@@ -57,6 +57,7 @@ footer{
     color: white;
 }
 
+
 .main-content {
     display: flex;
     flex-direction: column;
@@ -83,6 +84,7 @@ h2 {
     gap: 100px;
     justify-content: center;
 }
+
 
 /* Sidebar Styling */
 #sidebar {
@@ -336,3 +338,54 @@ th {
     height: auto; /* Maintain aspect ratio */
     margin: 5px; /* Optional: add space between cards */
 }
+
+.mainContainerColumn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100% 
+    gap: 100px;
+    justify-content: center;
+}
+
+#tableContainer{
+    background: white;
+    width: 100%;
+    max-width: 1000px;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+    text-align: center;
+}
+
+#plotContainer{
+    display: flex;
+    flex-direction : column;
+    background: white;
+    width: 100%;
+    max-width: 1000px;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+    text-align: center;
+}
+
+/* Center the content inside the label */
+.sliderLabel {
+    display: flex;
+    align-items: center; /* Center text and slider vertically */
+    gap: 15px;           /* Add space between the text, slider, and displayed value */
+    margin-top: 20px;    /* Add top margin for spacing */
+    justify-content: center; /* Center-align everything inside label */
+}
+
+.table_button{
+background: none;
+border-collapse: collapse;
+padding: 0;
+cursor: pointer;
+color: inherit;
+}
+

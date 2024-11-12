@@ -191,6 +191,20 @@ def get_players_statistics(db_path):
         players_stats = cursor.fetchall()
         return players_stats
 
+def get_player_profit_historique(player_name, db_path):
+    with get_db_connection(db_path) as conn:
+        cursor = conn.cursor()
+        query = """
+        SELECT h.date_time AS date_time,
+               ph.won AS profit 
+        FROM players p
+        JOIN players_hands ph ON p.id = ph.player_id
+        JOIN hands h ON ph.hand_id = h.id
+        WHERE p.name == ?
+        """
+        cursor.execute(query, (player_name,))
+        result = cursor.fetchall()
+        return result
 
 
 def full_update_players_hands(db_path):

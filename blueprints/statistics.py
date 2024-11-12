@@ -1,7 +1,11 @@
-from flask import Blueprint, request, jsonify, session, render_template, current_app, redirect
-from models import update_players_statistics, get_players_statistics
+from flask import Blueprint, request, jsonify, session, render_template, current_app, redirect, send_file
+from models import * 
 from collections import defaultdict
+import numpy as np
 import json
+from matplotlib.figure import Figure
+from io import BytesIO
+import pandas as pd
 
 statistics_bp = Blueprint('statistics', __name__)
 
@@ -10,10 +14,49 @@ def statistics():
     db_path = session.get("db_path", None)
     if db_path is None : return redirect('/')
 
+    # Update and retrieve overall statistics
     update_players_statistics(session["db_path"])
     stats = get_players_statistics(session["db_path"])
-    return render_template('statistics.html', stats = stats)
+    
+    # Get selected player from query parameters
+    selected_player = request.args.get('selected_player', None)
+    # if selected_player is None: selected_player = stats[0]["name"] # By default select the player with the greater number of hands
 
+    return render_template('statistics.html', stats = stats, selected_player=selected_player)
+
+@statistics_bp.route('/player_stats_plot')
+def player_stats_plot():
+    db_path = session.get("db_path")
+    player_name = request.args.get('name')
+    window_size = int(request.args.get('window_size', 10))  # Default window size to 10 if not provided
+    if not db_path or not player_name:
+        return jsonify({"error": "Database path or player name missing"}), 400
+
+    img = generate_cummulative_profit_plot(player_name, db_path, window_size)
+    return send_file(img, mimetype="image/png")
+
+def generate_cummulative_profit_plot(player_name, db_path, window_size = 10):
+    player_profits = get_player_profit_historique(player_name, db_path)
+    profits_df =  pd.DataFrame(player_profits)
+    profits_df["date_time"] =  pd.to_datetime(profits_df['date_time'], format='%Y-%m-%d %H:%M:%S')
+    profits_df.sort_values(by='date_time', inplace=True, ignore_index=True)
+    profits_df["profit_cum"] = np.cumsum(profits_df["profit"])
+    profits_df["profit_cum_smooth"] = profits_df["profit_cum"].rolling(window=window_size).mean()
+
+    # Generate the plot
+    fig = Figure(figsize=(12, 6))
+    ax = fig.subplots()
+    #ax.plot(profits_df["profit_cum"])
+    ax.plot(profits_df["profit_cum_smooth"])
+    ax.set_title(f"Statistics for {player_name}")
+    ax.set_xlabel("Hands")
+    ax.set_ylabel("Cumulative profit (€)")
+
+    img = BytesIO()
+    fig.savefig(img, format="png")
+    img.seek(0)
+
+    return img
 
 def OLD_compute_stats(): # UNUSED !! Becuase not efficient. We keep it as reference for now
 
