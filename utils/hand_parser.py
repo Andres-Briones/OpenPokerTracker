@@ -1,4 +1,5 @@
 from collections import defaultdict
+import numpy as np
 
 def getCardSymbol(card):
     suitSymbols = {
@@ -12,16 +13,21 @@ def getCardSymbol(card):
 def cardsListToString(cards):
     return " ".join([getCardSymbol(card) for card in cards])
 
-def parse_hand_stat(ohh_obj):
+def parse_hand_at_upload(ohh_obj):
     #Extract general info necessary for hand insertion in table
     ohh_data = ohh_obj["ohh"]
     hero_id = ohh_data.get("hero_player_id")
     game_number = ohh_data["game_number"]
     date_time = ohh_data["start_date_utc"]
-    hero_cards = ""
+    table_size = ohh_data["table_size"]
 
+    # Generate dict to store statistical data for each player 
+    stats_data = defaultdict(lambda: {"cards": "? ?", "position":0, "profit": 0, "vpip": 0, "pfr": 0})
+
+    # Set stats_data to None if anonymous game
+    # If stats_data is None, the hand will be skipped
     if "Anonymous" in ohh_data.get("flags",[]):
-        return {"game_number": game_number}, None
+        return {"game_number": game_number}, None 
 
     # Extract players and rounds
     players = ohh_data['players']
@@ -29,12 +35,28 @@ def parse_hand_stat(ohh_obj):
 
     # Map player IDs to names for easy reference
     id_to_name = {p['id']: p['name'] for p in players}
+
+
+    # Extract dealer seat
+    dealer_seat = ohh_data["dealer_seat"]
+
+    # Extraact players profits and seat 
+    player_profit = {}
+    player_seat = {}
+
+    for player in players :
+        win_amount = float(player.get("final_stack", 0)) - float(player["starting_stack"])
+        name = player["name"]
+        player_profit[name] = '%g' % win_amount
+        player_seat[name] = player["seat"]
+
             
     # Track preflop participation and actions for each player in the hand
     preflop_participation = set()
     preflop_raisers = set()
     game_participation = set()
-
+    player_cards = {}
+    
     for round_data in rounds:
         street = round_data['street']
         actions = round_data['actions']
@@ -52,20 +74,29 @@ def parse_hand_stat(ohh_obj):
                     preflop_raisers.add(player_name)
 
             # Get hero cards
-            if player_id  == hero_id and "cards" in action:
-                hero_cards = cardsListToString(action.get("cards"))
-    
-    # Generate dict to store statistical data for each player 
-    stats_data = defaultdict(lambda: {"vpip": 0, "pfr": 0, "won": 0})
-    for name in game_participation : stats_data[name] # Generate input for player in stats_data if player is not observer
+            if "cards" in action:
+                player_cards[player_name] = cardsListToString(action.get("cards"))
+    # Generate input for player in stats_data if player is not observer
+    number_players = len(game_participation)
+
+    # Generate seats_list for players that participated
+    seats_list = []
+    for name in game_participation:
+        seats_list.append(player_seat[name])
+    # We get a position from 0 to 6
+    position_list = (np.array(seats_list) - dealer_seat -1)% table_size
+    # We transform the position from 0 to 6 to 0 to number_players. 0 is SB and the highest is BU
+    real_position_list = np.argsort(np.argsort(position_list))
+    seat_to_position = {seat:int(real_position_list[i]) for i, seat in enumerate(seats_list) }
+
+    for name in game_participation :
+        # positon =  (seat - dealer_seat - 1)% table_size 
+        stats_data[name]["position"] = seat_to_position[player_seat[name]]
+        stats_data[name]["profit"] = player_profit[name]
+        if name in player_cards : stats_data[name]["cards"] = player_cards[name]
     for name in preflop_participation : stats_data[name]["vpip"] = 1
     for name in preflop_raisers : stats_data[name]["pfr"] = 1
 
-    for player in players :
-        win_amount = float(player.get("final_stack", 0)) - float(player["starting_stack"])
-        if win_amount != 0 : 
-            name = player["name"]
-            stats_data[name]["won"] = '%g' % win_amount
 
     stats_data = dict(stats_data) #Use dict in order to transform the defaultdic object
 
@@ -73,7 +104,10 @@ def parse_hand_stat(ohh_obj):
     general_data = {
         "game_number" : game_number,
         "date_time" : date_time,
-        "hero_cards" : hero_cards
+        "table_size" : table_size,
+        "number_players" : number_players,
+        "small_blind_amount" : ohh_data["small_blind_amount"],
+        "big_blind_amount" : ohh_data["big_blind_amount"]
         }
 
     return general_data, stats_data

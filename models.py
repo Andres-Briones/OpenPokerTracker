@@ -37,7 +37,10 @@ def init_db(db_path):
                 file_id INTEGER,
                 game_number TEXT,
                 date_time TEXT,
-                hero_cards TEXT,
+                table_size INT,
+                number_players INT,
+                small_blind_amount DECIMAL,
+                big_blind_amount DECIMAL,
                 ohh_data TEXT,  -- JSON blob to store the full ohh object
                 FOREIGN KEY (file_id) REFERENCES files(id)
             );
@@ -47,15 +50,17 @@ def init_db(db_path):
                 hands INTEGER, -- player hands
                 vpip REAL,
                 pfr REAL,
-                win_rate REAL -- $/100 hands (incorrect computation for now)
+                win_rate REAL 
                 -- We will add more statistics later
             );
             CREATE TABLE IF NOT EXISTS players_hands (
                 player_id INTEGER,
                 hand_id INTEGER,
+                cards TEXT,
+                position INT,
+                profit DECIMAL,
                 vpip BOOLEAN,
                 pfr BOOLEAN,
-                won DECIMAL,
                 FOREIGN KEY (player_id) REFERENCES players(id)
                 FOREIGN KEY (hand_id) REFERENCES hands(id)
             PRIMARY KEY (player_id, hand_id)  -- Ensures each player can participate in each hand only once
@@ -95,11 +100,12 @@ def save_hands_bulk(file_id, hand_data_list, db_path):
 
     # Collect data for all hands and players in the batch
     for hand_data in hand_data_list:
-        general_data, stats_data = parse_hand_stat(hand_data)
+        general_data, stats_data = parse_hand_at_upload(hand_data)
         if stats_data is None:
             print("Warning: stats_data is None for hand:", general_data["game_number"])
             continue  # Skip anonymous hands
 
+        # TODO add new info from general_data
         # Prepare hand data for bulk insert into `hands` table
         hands_data.append((file_id, general_data['game_number'], general_data['date_time'], general_data['hero_cards'], json.dumps(hand_data)))
         hands_stats.append(stats_data)
@@ -124,7 +130,8 @@ def save_hands_bulk(file_id, hand_data_list, db_path):
         # Build the player and player-hand link data with unique hand_ids
         for hand_id, players_stats in zip(hand_ids, hands_stats):
             for name, stats in players_stats.items():
-                players_hands_data.append((name, hand_id, stats['vpip'], stats['pfr'], stats['won']))
+                # TODO add new info from stats_data
+                players_hands_data.append((name, hand_id, stats['vpip'], stats['pfr'], stats['profit']))
                 players.add(name) # Add player name to players (it's a set so there will be only one entry per player)
 
         # Retrieve or insert players and build unique `players_hands` data
@@ -140,13 +147,13 @@ def save_hands_bulk(file_id, hand_data_list, db_path):
 
         # Prepare `players_hands` data with actual player IDs and unique hand IDs
         players_hands_insert_data = [
-            (name_to_id[player], hand_id, vpip, pfr, won)
-            for player, hand_id, vpip, pfr, won in players_hands_data
+            (name_to_id[player], hand_id, vpip, pfr, profit)
+            for player, hand_id, vpip, pfr, profit in players_hands_data
         ]
 
         # Insert all player-hand links in bulk
         cursor.executemany(
-            "INSERT INTO players_hands (player_id, hand_id, vpip, pfr, won) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO players_hands (player_id, hand_id, vpip, pfr, profit) VALUES (?, ?, ?, ?, ?)",
             players_hands_insert_data
         )
 
@@ -175,7 +182,7 @@ def update_players_statistics(db_path):
                      COUNT(player_id) AS hands,
                      AVG(vpip)*100 AS vpip,
                      AVG(pfr)*100 AS pfr,
-                     AVG(won)*100 AS win_rate
+                     AVG(profit)*100 AS win_rate
               FROM players_hands
               GROUP BY player_id)
         AS result
@@ -196,7 +203,7 @@ def get_player_profit_historique(player_name, db_path):
         cursor = conn.cursor()
         query = """
         SELECT h.date_time AS date_time,
-               ph.won AS profit 
+               ph.profit AS profit 
         FROM players p
         JOIN players_hands ph ON p.id = ph.player_id
         JOIN hands h ON ph.hand_id = h.id
@@ -208,7 +215,7 @@ def get_player_profit_historique(player_name, db_path):
 
 
 def full_update_players_hands(db_path):
-    """Fully updates players_hands table by reparsing all hands. Use this if you update parse_hand_stat function with modified or new statistics. All players should already be in the players table."""
+    """Fully updates players_hands table by reparsing all hands. Use this if you update parse_hand_at_upload function with modified or new statistics. All players should already be in the players table."""
     with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT id, ohh_data FROM hands")
@@ -216,17 +223,17 @@ def full_update_players_hands(db_path):
 
         for hand in hands :
             ohh = json.loads(hand["ohh_data"])
-            general_data, stats_data = parse_hand_stat(ohh)
+            general_data, stats_data = parse_hand_at_upload(ohh)
 
             for name in stats_data.keys():
-                vpip, pfr, won = stats_data[name]["vpip"], stats_data[name]["pfr"], stats_data[name]["won"]
+                vpip, pfr, profit = stats_data[name]["vpip"], stats_data[name]["pfr"], stats_data[name]["profit"]
                 cursor.execute("SELECT id FROM players WHERE name = ?", (name,))
                 player_id = cursor.fetchone()["id"]
                 
                 cursor.execute(""" UPDATE players_hands SET
-                vpip = ?, pfr = ?, won = ?
+                vpip = ?, pfr = ?, profit = ?
                 WHERE player_id = ? AND hand_id = ?""", 
-                               (vpip, pfr , won, player_id, hand["id"]))
+                               (vpip, pfr , profit, player_id, hand["id"]))
 
         conn.commit()
 
