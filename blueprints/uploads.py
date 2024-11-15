@@ -24,7 +24,12 @@ def create_database_route():
     db_path = os.path.join(current_app.config['DB_DIRECTORY'], f"{db_name}.db")
     if  os.path.exists(db_path):
         return jsonify({'error': 'Database already exists'}), 400
-    init_db(db_path)  # Initialize with the standard schema
+
+    if not init_db(db_path):  # Initialize with the standard schema
+        # TODO check that the database is removed correcly
+        os.remove(db_path)
+        return jsonify({'error': 'Database initialization failed'}), 400
+
     return ajax_redirect('uploads.index')
 
 @uploads_bp.route('/load_database', methods=['POST'])

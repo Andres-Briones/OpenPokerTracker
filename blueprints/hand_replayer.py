@@ -23,10 +23,6 @@ def upload_files():
     files = request.files.getlist('file')  # Get all files uploaded as 'file'
     len_files = len(files)
     upload_path = current_app.config["UPLOADS_PATH"]
-    new_files_uploaded = False
-
-    # Ensure the upload path exists
-    os.makedirs(upload_path, exist_ok=True)  # Creates the directory if it doesn't exist
 
     for num, file in enumerate(files):
         if file.filename == '':
@@ -35,17 +31,12 @@ def upload_files():
             print(f"File {file.filename} skipped, it's not an OHH file. ({num+1}/{len_files})")
             continue
 
-        file_path = upload_path + secure_filename(file.filename)
+        file_path = upload_path + "test.OHH"
         file.save(file_path)  # Save file to uploads directory
 
-        file_id  = models.add_file_to_db(file.filename, file_path, session["db_path"]) # returns None if file already exists on database
-
-        if file_id is None:
-            print(f"File {file.filename} arleady exists in the database. ({num+1}/{len_files})")
-        else :
-            with open(file_path, 'r') as f:
-                hand_data_list = [json.loads(hand.strip()) for hand in f.read().split('\n\n') if hand.strip()]
-                models.save_hands_bulk(file_id, hand_data_list, session["db_path"])
+        with open(file_path, 'r') as f:
+            hand_data_list = [json.loads(hand.strip()) for hand in f.read().split('\n\n') if hand.strip()]
+            models.save_hands_bulk(hand_data_list, session["db_path"])
             new_files_uploaded = True
             print(f"File {file.filename} was uploaded. ({num+1}/{len_files})")
 

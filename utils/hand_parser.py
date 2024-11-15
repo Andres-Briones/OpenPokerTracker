@@ -1,5 +1,6 @@
 from collections import defaultdict
 import numpy as np
+from datetime import datetime
 
 def getCardSymbol(card):
     suitSymbols = {
@@ -18,11 +19,12 @@ def parse_hand_at_upload(ohh_obj):
     ohh_data = ohh_obj["ohh"]
     hero_id = ohh_data.get("hero_player_id")
     game_number = ohh_data["game_number"]
-    date_time = ohh_data["start_date_utc"]
+    date_time = datetime.strptime(ohh_data["start_date_utc"], "%Y-%m-%dT%H:%M:%SZ")
+    date_time = date_time.strftime("%Y-%m-%d %H:%M:%S")
     table_size = ohh_data["table_size"]
 
     # Generate dict to store statistical data for each player 
-    stats_data = defaultdict(lambda: {"cards": "? ?", "position":0, "profit": 0, "vpip": 0, "pfr": 0})
+    stats_data = defaultdict(lambda: {"cards": None, "position":0, "profit": 0, "vpip": 0, "pfr": 0})
 
     # Set stats_data to None if anonymous game
     # If stats_data is None, the hand will be skipped
@@ -35,6 +37,10 @@ def parse_hand_at_upload(ohh_obj):
 
     # Map player IDs to names for easy reference
     id_to_name = {p['id']: p['name'] for p in players}
+
+    hero_name = id_to_name.get(hero_id, None)
+    observed = True if hero_name is None else False
+    if observed: print(f"Game {game_number} is observed" )
 
 
     # Extract dealer seat
@@ -73,9 +79,9 @@ def parse_hand_at_upload(ohh_obj):
                 if action_type == "Raise":
                     preflop_raisers.add(player_name)
 
-            # Get hero cards
-            if "cards" in action:
+            if action.get("cards", 0) : # action containes cards an they are not empty
                 player_cards[player_name] = cardsListToString(action.get("cards"))
+
     # Generate input for player in stats_data if player is not observer
     number_players = len(game_participation)
 
@@ -106,8 +112,12 @@ def parse_hand_at_upload(ohh_obj):
         "date_time" : date_time,
         "table_size" : table_size,
         "number_players" : number_players,
+        "hero_name" : hero_name,
+        "table_name" : ohh_data["table_name"],
         "small_blind_amount" : ohh_data["small_blind_amount"],
-        "big_blind_amount" : ohh_data["big_blind_amount"]
+        "big_blind_amount" : ohh_data["big_blind_amount"],
+        "site_name" : ohh_data["site_name"],
+        "observed" : observed
         }
 
     return general_data, stats_data
@@ -119,7 +129,7 @@ def parse_hand(hand_data):
 
     ohh_data = hand_data["ohh"]
     players = {player["id"]: player for player in ohh_data["players"]}
-    hero_id = ohh_data.get("hero_player_id")
+    hero_id = ohh_data.get("hero_player_id") # Can be null
     hero_cards = ""
 
     parsed_data = {
