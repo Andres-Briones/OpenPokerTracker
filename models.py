@@ -77,26 +77,27 @@ def save_hands_bulk(hand_data_list, db_path):
     players_hands_dics = []
     players = set()
 
-    # Collect data for all hands and players in the batch
-    for hand_data in hand_data_list:
-        general_data, stats_data = parse_hand_at_upload(hand_data)
-        if stats_data is None:
-            print("Warning: stats_data is None for hand:", general_data["game_number"])
-            continue  # Skip anonymous hands
+    with get_db_connection(db_path) as conn:
+        cursor = conn.cursor()
 
-        game_number = general_data["game_number"]
-        site_name = general_data["game_number"]
-        table_name = general_data["table_name"]
+        # Collect data for all hands and players in the batch
+        for hand_data in hand_data_list:
+            general_data, stats_data = parse_hand_at_upload(hand_data)
+            if stats_data is None:
+                print("Warning: stats_data is None for hand:", general_data["game_number"])
+                continue  # Skip anonymous hands
+            
+            game_number = general_data["game_number"]
+            site_name = general_data["game_number"]
+            table_name = general_data["table_name"]
         
-        # Check if hand already exists in database, if it's the case, skip the hand
+            # Check if hand already exists in database, if it's the case, skip the hand
 
-        with get_db_connection(db_path) as conn:
-            cursor = conn.cursor()
             cursor.execute("SELECT id FROM hands WHERE game_number = ? AND site_name = ? AND table_name = ?", (game_number, site_name, table_name))
             if cursor.fetchone(): continue
-
-        # Prepare hand data for bulk insert into `hands` table with correct order
-        hands_data.append((game_number,
+            
+            # Prepare hand data for bulk insert into `hands` table with correct order
+            hands_data.append((game_number,
                            general_data["date_time"],
                            site_name,
                            table_name,
@@ -108,13 +109,10 @@ def save_hands_bulk(hand_data_list, db_path):
                            general_data["observed"],
                            json.dumps(hand_data)))
 
-        players_hands_dics.append(stats_data)
-
-        #Add players name to players set
-        for name in stats_data.keys(): players.add(name)
-
-    with get_db_connection(db_path) as conn:
-        cursor = conn.cursor()
+            players_hands_dics.append(stats_data)
+            
+            #Add players name to players set
+            for name in stats_data.keys(): players.add(name)
 
         # Fetch the current max ID from the `hands` table directly
         cursor.execute("SELECT MAX(id) AS max_id FROM hands")
@@ -135,7 +133,6 @@ def save_hands_bulk(hand_data_list, db_path):
             ohh_data)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
         cursor.executemany(query,hands_data)
-        conn.commit()
 
         # Calculate new hand IDs starting from max_id + 1
         hand_ids = range(max_id + 1, max_id + 1 + len(hands_data))
