@@ -92,9 +92,9 @@ def save_hands_bulk(hand_data_list, db_path):
             table_name = general_data["table_name"]
         
             # Check if hand already exists in database, if it's the case, skip the hand
-
-            cursor.execute("SELECT id FROM hands WHERE game_number = ? AND site_name = ? AND table_name = ?", (game_number, site_name, table_name))
-            if cursor.fetchone(): continue
+            # TODO find a way to do it fast because it causes a lot of delay per file
+            #cursor.execute("SELECT id FROM hands WHERE game_number = ? AND site_name = ? AND table_name = ?", (game_number, site_name, table_name))
+            #if cursor.fetchone(): continue
             
             # Prepare hand data for bulk insert into `hands` table with correct order
             hands_data.append((game_number,
@@ -177,9 +177,9 @@ def load_hands_from_db(db_path):
     with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
         query = """
-        SELECT h.id,
-               h.table_name,
-               h.date_time,
+        SELECT h.id AS id,
+               h.table_name AS table_name,
+               h.date_time AS date_time,
                ph.cards AS hero_cards,
                ph.position AS position,
                ph.profit AS profit
@@ -187,11 +187,9 @@ def load_hands_from_db(db_path):
              JOIN players_hands ph ON h.id = ph.hand_id
              JOIN players p ON ph.player_id = p.id
         WHERE p.name == hero_name
-        """
-        cursor.execute(query)
-        hands = cursor.fetchall()
 
-        query = """
+        UNION
+
         SELECT id,
                table_name,
                date_time,
@@ -200,11 +198,12 @@ def load_hands_from_db(db_path):
                "x" AS profit
         FROM hands
         WHERE observed == true
+
+        ORDER BY date_time DESC
         """
         cursor.execute(query)
-        observed_hands = cursor.fetchall()
-        if observed_hands : 
-            hands += observed_hands
+        hands = cursor.fetchall()
+        
     return hands
 
 def update_players_statistics(db_path):
