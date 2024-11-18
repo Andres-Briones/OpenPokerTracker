@@ -262,9 +262,16 @@ def full_update_players_hands(db_path):
         cursor = conn.cursor()
         cursor.execute("SELECT id, ohh_data FROM hands")
         hands = cursor.fetchall()
-        
+
         cursor.execute("SELECT id, name FROM players")
         players = cursor.fetchall()
+
+        # We can't update a table directly with df.to_sql() and by replacing it we loose the types information. For simplicity and generality we will remove the old table, recreate one empty with init_db and append to the table with to_sql().
+        cursor.execute("DROP TABLE players_hands")
+
+        conn.commit()
+
+    init_db(db_path) # Recreates players_hands table
 
     name_to_id = {player["name"]:player["id"] for player in players}
     
@@ -272,21 +279,24 @@ def full_update_players_hands(db_path):
     for hand in hands:
         ohh = json.loads(hand["ohh_data"])
         general_data, stats_data = parse_hand_at_upload(ohh)
-        df = pd.DataFrame(data = stats_data).T.reset_index(names = 'name')
-        df['players_id'] = df['name'].apply(lambda name : name_to_id[name])
+        df = pd.DataFrame(data = stats_data).T.reset_index(names = 'player_id')
+        df['player_id'] = df['player_id'].apply(lambda name : name_to_id[name])
         df["hand_id"] = hand["id"]
         players_hands_df_list.append(df)
 
     players_hands_df = pd.concat(players_hands_df_list, ignore_index=True)
 
-    with sqlite3.connect(main_db_path) as conn:
+    with sqlite3.connect(db_path) as conn:
+
+        chunk_size = 999 // (len(players_hands_df.columns))
         players_hands_df.to_sql(
             name = 'players_hands',# Name of SQL table.
             con = conn, # sqlalchemy.engine.Engine or sqlite3.Connection
-            if_exists='replace', # How to behave if the table already exists. You can use 'replace', 'append' to replace it.
+            if_exists='append', # How to behave if the table already exists. You can use 'replace', 'append' to replace it.
             index=False, # It means index of DataFrame will save. Set False to ignore the index of DataFrame.
             index_label=False, # Depend on index. 
-            chunksize=None, # Just means chunksize. If DataFrame is big will need this parameter.
+            chunksize=chunk_size, # Just means chunksize. If DataFrame is big will need this parameter.
+            method="multi", # For inserting with executemany
             dtype=None, # Set the columns type of sql table. Usefull when creating the table
         )
         conn.commit()

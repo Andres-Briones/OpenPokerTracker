@@ -25,7 +25,7 @@ def parse_hand_at_upload(ohh_obj):
 
     # Generate dict to store statistical data for each player 
     # TODO add more counters like 3bet, fold/call to 2-bet etc
-    stats_data = defaultdict(lambda: {"cards": None, "position":0, "profit": 0, "vpip": 0, "pfr": 0, "limp" : 0, "2bet": 0 })
+    stats_data = defaultdict(lambda: {"cards": None, "position":0, "profit": 0, "vpip": 0, "pfr": 0, "limp" : 0, "two_bet": 0 })
 
     # Set stats_data to None if anonymous game
     # If stats_data is None, the hand will be skipped
@@ -122,7 +122,7 @@ def parse_hand_at_upload(ohh_obj):
     for name in preflop_participation : stats_data[name]["vpip"] = 1
     for name in preflop_raisers : stats_data[name]["pfr"] = 1
     for name in preflop_limp: stats_data[name]["limp"] = 1
-    for name in preflop_2bet : stats_data[name]["2bet"] = 1
+    for name in preflop_2bet : stats_data[name]["two_bet"] = 1
 
 
     stats_data = dict(stats_data) #Use dict in order to transform the defaultdic object
