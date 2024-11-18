@@ -23,12 +23,8 @@ def parse_hand_at_upload(ohh_obj):
     date_time = date_time.strftime("%Y-%m-%d %H:%M:%S")
     table_size = ohh_data["table_size"]
 
-    # Generate dict to store statistical data for each player 
-    # TODO add more counters like 3bet, fold/call to 2-bet etc
-    stats_data = defaultdict(lambda: {"cards": None, "position":0, "profit": 0, "vpip": 0, "pfr": 0, "limp" : 0, "two_bet": 0 })
-
-    # Set stats_data to None if anonymous game
-    # If stats_data is None, the hand will be skipped
+    # Set players_hands_data to None if anonymous game
+    # If players_hands_data is None, the hand will be skipped
     if "Anonymous" in ohh_data.get("flags",[]):
         return {"game_number": game_number}, None 
 
@@ -100,7 +96,6 @@ def parse_hand_at_upload(ohh_obj):
             if action.get("cards", 0) : # action containes cards an they are not empty
                 player_cards[player_name] = cardsListToString(action.get("cards"))
 
-    # Generate input for player in stats_data if player is not observer
     number_players = len(game_participation)
 
     # Generate seats_list for players that participated
@@ -113,22 +108,36 @@ def parse_hand_at_upload(ohh_obj):
     real_position_list = np.argsort(np.argsort(position_list))
     seat_to_position = {seat:int(real_position_list[i]) for i, seat in enumerate(seats_list) }
 
-    # TODO implement for 3bet and name of agressor when 3bet, call or folds to 2bet, do the same for 4bet etc.
+
+    # Generate dict to store statistical data for each player 
+    # TODO add more counters like 3bet, fold/call to 2-bet etc
+    # IMPORTANT : players_hands_dics need to have the same  keys as the row names in players_hands table
+    players_hands_data = defaultdict(lambda:
+                             {"cards": None,
+                              "position": 0,
+                              "profit": 0,
+                              "vpip": 0,
+                              "pfr": 0,
+                              "limp" : 0,
+                              "two_bet": 0
+                              })
+
     for name in game_participation :
+        # Generate input for player in players_hands_data if player is not observer
         # positon =  (seat - dealer_seat - 1)% table_size 
-        stats_data[name]["position"] = seat_to_position[player_seat[name]]
-        stats_data[name]["profit"] = player_profit[name]
-        if name in player_cards : stats_data[name]["cards"] = player_cards[name]
-    for name in preflop_participation : stats_data[name]["vpip"] = 1
-    for name in preflop_raisers : stats_data[name]["pfr"] = 1
-    for name in preflop_limp: stats_data[name]["limp"] = 1
-    for name in preflop_2bet : stats_data[name]["two_bet"] = 1
+        players_hands_data[name]["position"] = seat_to_position[player_seat[name]]
+        players_hands_data[name]["profit"] = player_profit[name]
+        if name in player_cards : players_hands_data[name]["cards"] = player_cards[name]
+    for name in preflop_participation : players_hands_data[name]["vpip"] = 1
+    for name in preflop_raisers : players_hands_data[name]["pfr"] = 1
+    for name in preflop_limp: players_hands_data[name]["limp"] = 1
+    for name in preflop_2bet : players_hands_data[name]["two_bet"] = 1
 
+    players_hands_data = dict(players_hands_data) #Use dict in order to transform the defaultdic object
 
-    stats_data = dict(stats_data) #Use dict in order to transform the defaultdic object
-
-    # Generate dic for general data
-    general_data = {
+    # Generate dic for hands data
+    # IMPORTANT : this dic need to have exactly the same keys as the row names in hands table
+    hands_data = {
         "game_number" : game_number,
         "date_time" : date_time,
         "table_size" : table_size,
@@ -141,7 +150,7 @@ def parse_hand_at_upload(ohh_obj):
         "observed" : observed
         }
 
-    return general_data, stats_data
+    return hands_data, players_hands_data
 
 def parse_hand(hand_data):
     if "ohh" not in hand_data:

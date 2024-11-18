@@ -76,69 +76,54 @@ def init_db(db_path):
 
 def save_hands_bulk(hand_data_list, db_path):
     """Inserts multiple hands and associated player data in a single transaction."""
-    hands_data = []
-    players_hands_dics = []
-    players = set()
 
-    with get_db_connection(db_path) as conn:
+    hands_dics = []
+    players = set()
+    players_hands_dics = []
+
+    # Collect data for all hands and players in the batch
+    for hand_data in hand_data_list:
+        hands_data, players_hands_data = parse_hand_at_upload(hand_data)
+        if players_hands_data is None:
+            continue  # Skip anonymous hands
+        
+        # Check if hand already exists in database, if it's the case, skip the hand
+        # TODO find a way to do it fast because it causes a lot of delay per file
+        #game_number = hands_data["game_number"]
+        #site_name = hands_data["game_number"]
+        #table_name = hands_data["table_name"]
+        #cursor.execute("SELECT id FROM hands WHERE game_number = ? AND site_name = ? AND table_name = ?", (game_number, site_name, table_name))
+        #if cursor.fetchone(): continue
+        
+        hands_data["ohh_data"] = json.dumps(hand_data)
+        hands_dics.append(hands_data)
+        players_hands_dics.append(players_hands_data)
+            
+        #Add players name to players set
+        for name in players_hands_data.keys(): players.add(name)
+
+    with sqlite3.connect(db_path) as conn:
         cursor = conn.cursor()
 
-        # Collect data for all hands and players in the batch
-        for hand_data in hand_data_list:
-            general_data, stats_data = parse_hand_at_upload(hand_data)
-            if stats_data is None:
-                print("Warning: stats_data is None for hand:", general_data["game_number"])
-                continue  # Skip anonymous hands
-            
-            game_number = general_data["game_number"]
-            site_name = general_data["game_number"]
-            table_name = general_data["table_name"]
-        
-            # Check if hand already exists in database, if it's the case, skip the hand
-            # TODO find a way to do it fast because it causes a lot of delay per file
-            #cursor.execute("SELECT id FROM hands WHERE game_number = ? AND site_name = ? AND table_name = ?", (game_number, site_name, table_name))
-            #if cursor.fetchone(): continue
-            
-            # Prepare hand data for bulk insert into `hands` table with correct order
-            hands_data.append((game_number,
-                           general_data["date_time"],
-                           site_name,
-                           table_name,
-                           general_data["table_size"],
-                           general_data["number_players"],
-                           general_data["hero_name"],
-                           general_data["small_blind_amount"],
-                           general_data["big_blind_amount"],
-                           general_data["observed"],
-                           json.dumps(hand_data)))
-
-            players_hands_dics.append(stats_data)
-            
-            #Add players name to players set
-            for name in stats_data.keys(): players.add(name)
-
         # Fetch the current max ID from the `hands` table directly
-        cursor.execute("SELECT MAX(id) AS max_id FROM hands")
-        max_id = cursor.fetchone()["max_id"] or 0  # Set to 0 if there are no rows
+        cursor.execute("SELECT MAX(id) FROM hands")
+        max_id = cursor.fetchone()[0] or 0  # Set to 0 if there are no rows
 
-        # Insert all hands in bulk
-        query = """ INSERT INTO hands (
-            game_number,
-            date_time,
-            site_name,
-            table_name,
-            table_size,
-            number_players,
-            hero_name,
-            small_blind_amount,
-            big_blind_amount,
-            observed,
-            ohh_data)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
-        cursor.executemany(query,hands_data)
+        # Generate hands dataframe from list of dictionaries
+        hands_df = pd.DataFrame.from_dict(hands_dics)
+
+        # Insert hands dataframe into hands table
+        hands_df.to_sql(
+            name = 'hands',# Name of SQL table.
+            con = conn, # sqlalchemy.engine.Engine or sqlite3.Connection
+            if_exists='append', # How to behave if the table already exists. You can use 'replace', 'append' to replace it.
+            index=False, # It means index of DataFrame will save. Set False to ignore the index of DataFrame.
+            chunksize= 999 // (len(hands_df.columns)+1), # If DataFrame is big, this parameter is needed 
+            method="multi" # For inserting with executemany
+        )
 
         # Calculate new hand IDs starting from max_id + 1
-        hand_ids = range(max_id + 1, max_id + 1 + len(hands_data))
+        hand_ids = range(max_id + 1, max_id + 1 + len(hands_dics))
 
         # Retrieve player_id or insert player and get id
         name_to_id = {}
@@ -146,33 +131,30 @@ def save_hands_bulk(hand_data_list, db_path):
             cursor.execute("SELECT id FROM players WHERE name = ?", (name,))
             result = cursor.fetchone()
             if result:
-                name_to_id[name] = result["id"]  # Existing player ID
+                name_to_id[name] = result[0]  # Existing player ID
             else:
                 cursor.execute("INSERT INTO players (name) VALUES (?)", (name,))
                 name_to_id[name] = cursor.lastrowid  # New player ID
 
+        # Prepare players_hands dataframe by using hands_ids and name_to_id
+        players_hands_df_list = []
+        for hand_id, players_hands in zip(hand_ids, players_hands_dics) : 
+            df = pd.DataFrame(data = players_hands).T.reset_index(names = 'player_id')
+            df['player_id'] = df['player_id'].apply(lambda name : name_to_id[name])
+            df["hand_id"] = hand_id
+            players_hands_df_list.append(df)
 
-        # Prepare `players_hands` data
-        players_hands_data = []
-        for player_stats, hand_id in zip(players_hands_dics, hand_ids) :
-            for name, stats in player_stats.items():
-                players_hands_data.append((
-                    name_to_id[name],
-                    hand_id,
-                    stats["cards"],
-                    stats["position"],
-                    stats["profit"],
-                    stats["vpip"],
-                    stats["pfr"],
-                    stats["limp"],
-                    stats["2bet"]
-                ))
+        players_hands_df = pd.concat(players_hands_df_list, ignore_index=True)
 
-        # Insert all player-hand links in bulk
-        query = """
-        INSERT INTO players_hands (player_id, hand_id, cards, position, profit, vpip, pfr, limp, two_bet)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"""
-        cursor.executemany(query,players_hands_data)
+        # Insert players_hands dataframe into players_hands table
+        players_hands_df.to_sql(
+            name = 'players_hands',# Name of SQL table.
+            con = conn, # sqlalchemy.engine.Engine or sqlite3.Connection
+            if_exists='append', # How to behave if the table already exists. You can use 'replace', 'append' to replace it.
+            index=False, # It means index of DataFrame will save. Set False to ignore the index of DataFrame.
+            chunksize= 999 // (len(players_hands_df.columns)+1), # If DataFrame is big, this parameter is needed 
+            method="multi" # For inserting with executemany
+        )
 
         conn.commit()  # Single commit for the entire bulk
 
@@ -278,8 +260,8 @@ def full_update_players_hands(db_path):
     players_hands_df_list = []
     for hand in hands:
         ohh = json.loads(hand["ohh_data"])
-        general_data, stats_data = parse_hand_at_upload(ohh)
-        df = pd.DataFrame(data = stats_data).T.reset_index(names = 'player_id')
+        hands_data, players_hands_data = parse_hand_at_upload(ohh)
+        df = pd.DataFrame(data = players_hands_data).T.reset_index(names = 'player_id')
         df['player_id'] = df['player_id'].apply(lambda name : name_to_id[name])
         df["hand_id"] = hand["id"]
         players_hands_df_list.append(df)
@@ -288,14 +270,12 @@ def full_update_players_hands(db_path):
 
     with sqlite3.connect(db_path) as conn:
 
-        chunk_size = 999 // (len(players_hands_df.columns))
         players_hands_df.to_sql(
             name = 'players_hands',# Name of SQL table.
             con = conn, # sqlalchemy.engine.Engine or sqlite3.Connection
             if_exists='append', # How to behave if the table already exists. You can use 'replace', 'append' to replace it.
             index=False, # It means index of DataFrame will save. Set False to ignore the index of DataFrame.
-            index_label=False, # Depend on index. 
-            chunksize=chunk_size, # Just means chunksize. If DataFrame is big will need this parameter.
+            chunksize= 999 // (len(players_hands_df.columns)+1), # If DataFrame is big, this parameter is needed 
             method="multi", # For inserting with executemany
             dtype=None, # Set the columns type of sql table. Usefull when creating the table
         )
