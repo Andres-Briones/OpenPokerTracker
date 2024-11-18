@@ -359,7 +359,7 @@ th {
     text-align: center;
 }
 
-#plotContainer{
+.plotContainer{
     display: flex;
     flex-direction : column;
     background: white;

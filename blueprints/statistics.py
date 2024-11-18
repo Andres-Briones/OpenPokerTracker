@@ -33,6 +33,16 @@ def player_stats_plot():
     return send_file(img, mimetype="image/png")
 
 
+@statistics_bp.route('/player_opening_range_plot')
+def player_opening_range_plot():
+    db_path = session.get("db_path")
+    player_name = request.args.get('name')
+    if not player_name:
+        return jsonify({"error": "Player name missing"}), 400
+    img = generate_opening_range_plot(player_name, db_path)
+    return send_file(img, mimetype="image/png")
+
+
 def OLD_compute_stats(): # UNUSED !! Becuase not efficient. We keep it as reference for now
 
     # Generates a default dict. When calling the fist time stats_data["player"], this will set all the defaults counters for player to zero.

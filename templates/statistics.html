@@ -36,13 +36,13 @@
     </div>
 
 
-    <div id="plotContainer" >
+    <div class="plotContainer" >
         <!-- Slider to control rolling window size -->
         <h3>Player Statistics</h3>
         <!-- Player Plot Display -->
         {% if selected_player %}
-        <div id="plotContainer2">
-            <img id="playerChart" src="{{ url_for('statistics.player_stats_plot', name=selected_player) }}" alt="Statistics for {{ selected_player }}" style="max-width: 100%; height: auto;">
+        <div>
+            <img id="playerChart" src="{{ url_for('statistics.player_stats_plot', name=selected_player) }}" style="max-width: 100%; height: auto;">
         </div>
 
         <label for="windowSizeSlider" class="sliderLabel">
@@ -54,6 +54,20 @@
             <div style="margin:10px">Select a player to view their statistics.</div>
         {% endif %}
     </div>
+
+
+    <div class="plotContainer" >
+        <h3>Player Opening Range </h3>
+        <!-- Player Plot Display -->
+        {% if selected_player %}
+        <div>
+            <img id="playerOpeningRange" src="{{url_for('statistics.player_opening_range_plot', name=selected_player) }}" style="max-width: 100%; height: auto;">
+        </div>
+        {% else %}
+            <div style="margin:10px">Select a player to view their opening range.</div>
+        {% endif %}
+    </div>
+    
 </div>
 
 <script>
