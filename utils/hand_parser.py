@@ -24,7 +24,8 @@ def parse_hand_at_upload(ohh_obj):
     table_size = ohh_data["table_size"]
 
     # Generate dict to store statistical data for each player 
-    stats_data = defaultdict(lambda: {"cards": None, "position":0, "profit": 0, "vpip": 0, "pfr": 0})
+    # TODO add more counters like 3bet, fold/call to 2-bet etc
+    stats_data = defaultdict(lambda: {"cards": None, "position":0, "profit": 0, "vpip": 0, "pfr": 0, "limp" : 0, "2bet": 0 })
 
     # Set stats_data to None if anonymous game
     # If stats_data is None, the hand will be skipped
@@ -58,14 +59,23 @@ def parse_hand_at_upload(ohh_obj):
 
             
     # Track preflop participation and actions for each player in the hand
+    game_participation = set()
+
     preflop_participation = set()
     preflop_raisers = set()
-    game_participation = set()
+    preflop_2bet_possibility = set()
+    preflop_limp= set()
+    preflop_2bet = set()
+    preflop_3bet = set()
+    preflop_call_to_2bet = set()
+
     player_cards = {}
     
     for round_data in rounds:
         street = round_data['street']
         actions = round_data['actions']
+
+        raise_counter = 0
         for action in actions:
             player_id = action.get("player_id")
             player_name = id_to_name.get(player_id)
@@ -75,9 +85,17 @@ def parse_hand_at_upload(ohh_obj):
             # VPIP: Any call or raise action before the flop
             if street == "Preflop" and action_type in ["Call", "Raise"]:
                 preflop_participation.add(player_name)
-                #PFR : Preflop first raises or 3-bet, 4-bet, etc
                 if action_type == "Raise":
+                    #PFR : Preflop first raises or 3-bet, 4-bet, etc
                     preflop_raisers.add(player_name)
+                    if raise_counter == 0 : preflop_2bet.add(player_name)
+                    elif raise_counter == 1 : preflop_3bet.add(player_name) 
+                    raise_counter += 1
+                else: # It's a Call
+                    if raise_counter == 0: #  raise_counter is 0 => playerlimps
+                        preflop_limp.add(player_name)
+                    elif raise_counter == 1:  
+                        preflop_call_to_2bet.add(player_name)
 
             if action.get("cards", 0) : # action containes cards an they are not empty
                 player_cards[player_name] = cardsListToString(action.get("cards"))
@@ -95,6 +113,7 @@ def parse_hand_at_upload(ohh_obj):
     real_position_list = np.argsort(np.argsort(position_list))
     seat_to_position = {seat:int(real_position_list[i]) for i, seat in enumerate(seats_list) }
 
+    # TODO implement for 3bet and name of agressor when 3bet, call or folds to 2bet, do the same for 4bet etc.
     for name in game_participation :
         # positon =  (seat - dealer_seat - 1)% table_size 
         stats_data[name]["position"] = seat_to_position[player_seat[name]]
@@ -102,6 +121,8 @@ def parse_hand_at_upload(ohh_obj):
         if name in player_cards : stats_data[name]["cards"] = player_cards[name]
     for name in preflop_participation : stats_data[name]["vpip"] = 1
     for name in preflop_raisers : stats_data[name]["pfr"] = 1
+    for name in preflop_limp: stats_data[name]["limp"] = 1
+    for name in preflop_2bet : stats_data[name]["2bet"] = 1
 
 
     stats_data = dict(stats_data) #Use dict in order to transform the defaultdic object

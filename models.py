@@ -4,6 +4,7 @@ import sqlite3
 from config import Config
 import os
 import json
+import pandas as pd
 from utils.hand_parser import * 
 
 
@@ -58,6 +59,8 @@ def init_db(db_path):
                 profit DECIMAL,
                 vpip BOOLEAN,
                 pfr BOOLEAN,
+                limp BOOLEAN,
+                two_bet BOOLEAN,
                 FOREIGN KEY (player_id) REFERENCES players(id)
                 FOREIGN KEY (hand_id) REFERENCES hands(id)
             PRIMARY KEY (player_id, hand_id)  -- Ensures each player can participate in each hand only once
@@ -160,13 +163,15 @@ def save_hands_bulk(hand_data_list, db_path):
                     stats["position"],
                     stats["profit"],
                     stats["vpip"],
-                    stats["pfr"]
+                    stats["pfr"],
+                    stats["limp"],
+                    stats["2bet"]
                 ))
 
         # Insert all player-hand links in bulk
         query = """
-        INSERT INTO players_hands (player_id, hand_id, cards, position, profit, vpip, pfr)
-        VALUES (?, ?, ?, ?, ?, ?, ?)"""
+        INSERT INTO players_hands (player_id, hand_id, cards, position, profit, vpip, pfr, limp, two_bet)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"""
         cursor.executemany(query,players_hands_data)
 
         conn.commit()  # Single commit for the entire bulk
@@ -251,27 +256,38 @@ def get_player_profit_historique(player_name, db_path):
         result = cursor.fetchall()
         return result
 
-
 def full_update_players_hands(db_path):
     """Fully updates players_hands table by reparsing all hands. Use this if you update parse_hand_at_upload function with modified or new statistics. All players should already be in the players table."""
     with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT id, ohh_data FROM hands")
         hands = cursor.fetchall()
+        
+        cursor.execute("SELECT id, name FROM players")
+        players = cursor.fetchall()
 
-        for hand in hands :
-            ohh = json.loads(hand["ohh_data"])
-            general_data, stats_data = parse_hand_at_upload(ohh)
+    name_to_id = {player["name"]:player["id"] for player in players}
+    
+    players_hands_df_list = []
+    for hand in hands:
+        ohh = json.loads(hand["ohh_data"])
+        general_data, stats_data = parse_hand_at_upload(ohh)
+        df = pd.DataFrame(data = stats_data).T.reset_index(names = 'name')
+        df['players_id'] = df['name'].apply(lambda name : name_to_id[name])
+        df["hand_id"] = hand["id"]
+        players_hands_df_list.append(df)
 
-            for name in stats_data.keys():
-                vpip, pfr, profit = stats_data[name]["vpip"], stats_data[name]["pfr"], stats_data[name]["profit"]
-                cursor.execute("SELECT id FROM players WHERE name = ?", (name,))
-                player_id = cursor.fetchone()["id"]
-                
-                cursor.execute(""" UPDATE players_hands SET
-                vpip = ?, pfr = ?, profit = ?
-                WHERE player_id = ? AND hand_id = ?""", 
-                               (vpip, pfr , profit, player_id, hand["id"]))
+    players_hands_df = pd.concat(players_hands_df_list, ignore_index=True)
 
+    with sqlite3.connect(main_db_path) as conn:
+        players_hands_df.to_sql(
+            name = 'players_hands',# Name of SQL table.
+            con = conn, # sqlalchemy.engine.Engine or sqlite3.Connection
+            if_exists='replace', # How to behave if the table already exists. You can use 'replace', 'append' to replace it.
+            index=False, # It means index of DataFrame will save. Set False to ignore the index of DataFrame.
+            index_label=False, # Depend on index. 
+            chunksize=None, # Just means chunksize. If DataFrame is big will need this parameter.
+            dtype=None, # Set the columns type of sql table. Usefull when creating the table
+        )
         conn.commit()
-
+    
