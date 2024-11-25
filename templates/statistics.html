@@ -7,12 +7,14 @@
 
 <div class="mainContainerColumn" >
     <div class="mainContainer">
-    <div id="tableContainer" style="width: 25% ">
+    <div id="tableContainer" style="width: 35% ">
         <table style="width: 100%; border-collapse: collapse ; table-layout : fixed;  margin: 0; ">
             <thead style="position: sticky; top: 0; z-index: 1;">
                 <tr>
                     <th>Name</th>
                     <th>Hands</th>
+                    <th>VPIP(%)</th>
+                    <th>PFR(%)</th>
                 </tr>
             </thead>
         </table>
@@ -23,6 +25,8 @@
                     <tr class="clickable-row" onclick="location.href='{{ url_for('statistics.statistics', selected_player=player.name) }}'">
                         <td>{{ player.name }}</td>
                         <td>{{ player.hands }}</td>
+                        <td>{{ player.vpip }}</td>
+                        <td>{{ player.pfr }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

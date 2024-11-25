@@ -213,15 +213,17 @@ def update_players_statistics(db_path):
         cursor.execute("""
         UPDATE players
         SET hands = result.hands,
-            vpip = result.vpip,
-            pfr = result.pfr,
-            win_rate = result.win_rate
+            vpip = result.VPIP,
+            pfr = result.PFR,
+            win_rate = result.bb_per_hand,
+            af = result.AF
         FROM (SELECT player_id,
-                     COUNT(player_id) AS hands,
-                     AVG(vpip)*100 AS vpip,
-                     AVG(pfr)*100 AS pfr,
-                     AVG(profit)*100 AS win_rate
-              FROM players_hands
+                     COUNT(ph.hand_id) AS hands,
+                     ROUND(CAST(SUM(ph.vpip) AS FLOAT) / CAST(SUM(ph.participed) AS FLOAT)*100,2) AS VPIP,
+                     ROUND(CAST(SUM(ph.pfr) AS FLOAT) / CAST(SUM(ph.participed) AS FLOAT)*100,2) AS PFR,
+                     ROUND(CAST(SUM(ph.aggressive) AS FLOAT) / CAST(SUM(ph.passive) AS FLOAT),2) AS AF,
+                     ROUND(AVG(profit) / h.big_blind_amount,2) AS bb_per_hand
+              FROM players_hands ph JOIN hands h on ph.hand_id == h.id
               GROUP BY player_id)
         AS result
         WHERE players.id = result.player_id
