@@ -110,6 +110,9 @@ def save_hands_bulk(hand_data_list, db_path):
         #Add players name to players set
         for name in players_hands_data.keys(): players.add(name)
 
+    if not players_hands_dics : # If the list is empty it means that all games are annonymous
+        return
+
     with sqlite3.connect(db_path) as conn:
         cursor = conn.cursor()
 
@@ -165,6 +168,8 @@ def save_hands_bulk(hand_data_list, db_path):
         )
 
         conn.commit()  # Single commit for the entire bulk
+
+    return
 
 
 def load_hands_from_db(db_path):
