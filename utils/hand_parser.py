@@ -53,45 +53,78 @@ def parse_hand_at_upload(ohh_obj):
         player_profit[name] = '%g' % win_amount
         player_seat[name] = player["seat"]
 
+
+    # Generate dict to store statistical data for each player 
+    # TODO add more counters like 3bet, fold/call to 2-bet etc
+    # IMPORTANT : players_hands_dics need to have the same  keys as the row names in players_hands table
+    players_hands_data = defaultdict(lambda:
+                             {"cards": None,
+                              "position": 0,
+                              "position_name": None,
+                              "profit": 0,
+                              "participed" : 0,
+                              "vpip": 0,
+                              "pfr": 0,
+                              "two_bet_possibility": 0,
+                              "limp" : 0,
+                              "two_bet": 0,
+                              "three_bet_possibility": 0,
+                              "three_bet": 0,
+                              "aggressive" : 0,
+                              "passive" : 0 
+                              })
             
     # Track preflop participation and actions for each player in the hand
     game_participation = set()
 
     preflop_participation = set()
     preflop_raisers = set()
-    preflop_2bet_possibility = set()
-    preflop_limp= set()
-    preflop_2bet = set()
-    preflop_3bet = set()
-    preflop_call_to_2bet = set()
 
     player_cards = {}
+    BB_player = None
     
     for round_data in rounds:
         street = round_data['street']
         actions = round_data['actions']
 
-        raise_counter = 0
+        raise_counter = 1 # We start after BB
         for action in actions:
             player_id = action.get("player_id")
             player_name = id_to_name.get(player_id)
             action_type = action.get("action")
             game_participation.add(player_name)
 
-            # VPIP: Any call or raise action before the flop
-            if street == "Preflop" and action_type in ["Call", "Raise"]:
-                preflop_participation.add(player_name)
+            if street == "Preflop":
+                if action_type == "Post BB":
+                    BB_player = player_name
+
+                # VPIP: Any call or raise action before the flop
+                if action_type in ["Call", "Raise"]:
+                    preflop_participation.add(player_name)
+
+                if action_type in ["Call", "Raise", "Fold", "Check"]:
+                    if raise_counter == 1: # First bet round
+                        players_hands_data[player_name]["two_bet_possibility"] = 1
+                        if action_type == "Raise":
+                            players_hands_data[player_name]["two_bet"] = 1
+                        elif action_type == "Call":
+                            players_hands_data[player_name]["limp"] = 1
+                    elif raise_counter == 2: # Second bet round
+                        players_hands_data[player_name]["three_bet_possibility"] = 1
+                        if action_type == "Raise":
+                            players_hands_data[player_name]["three_bet"] = 1
+
+                #PFR : Preflop first raises or 3-bet, 4-bet, etc
                 if action_type == "Raise":
-                    #PFR : Preflop first raises or 3-bet, 4-bet, etc
-                    preflop_raisers.add(player_name)
-                    if raise_counter == 0 : preflop_2bet.add(player_name)
-                    elif raise_counter == 1 : preflop_3bet.add(player_name) 
                     raise_counter += 1
-                else: # It's a Call
-                    if raise_counter == 0: #  raise_counter is 0 => playerlimps
-                        preflop_limp.add(player_name)
-                    elif raise_counter == 1:  
-                        preflop_call_to_2bet.add(player_name)
+                    preflop_raisers.add(player_name) 
+
+            else :
+                if action_type in ["Bet", "Raise"]:
+                    players_hands_data[player_name]["aggressive"] += 1
+                elif  action_type == "Call" :
+                    players_hands_data[player_name]["passive"] += 1
+
 
             if action.get("cards", 0) : # action containes cards an they are not empty
                 player_cards[player_name] = cardsListToString(action.get("cards"))
@@ -108,30 +141,30 @@ def parse_hand_at_upload(ohh_obj):
     real_position_list = np.argsort(np.argsort(position_list))
     seat_to_position = {seat:int(real_position_list[i]) for i, seat in enumerate(seats_list) }
 
+    position_to_name = {
+        (0,2):"SB", (1,2):"BB",
+        (0,3):"SB", (1,3):"BB", (2,3):"BU",
+        (0,4):"SB", (1,4):"BB", (2,4):"CO", (3,4):"BU",
+        (0,5):"SB", (1,5):"BB", (2,5):"HJ", (3,5):"CO", (4,5):"BU",
+        (0,6):"SB", (1,6):"BB", (2,6):"MP", (3,6):"HJ", (4,6):"CO", (5,6):"BU"
+    }
 
-    # Generate dict to store statistical data for each player 
-    # TODO add more counters like 3bet, fold/call to 2-bet etc
-    # IMPORTANT : players_hands_dics need to have the same  keys as the row names in players_hands table
-    players_hands_data = defaultdict(lambda:
-                             {"cards": None,
-                              "position": 0,
-                              "profit": 0,
-                              "vpip": 0,
-                              "pfr": 0,
-                              "limp" : 0,
-                              "two_bet": 0
-                              })
 
     for name in game_participation :
-        # Generate input for player in players_hands_data if player is not observer
+        # Generate input for player in players_hands_data if player is not observer 
+        players_hands_data[name]["participed"] = 1 # This wil
         # positon =  (seat - dealer_seat - 1)% table_size 
-        players_hands_data[name]["position"] = seat_to_position[player_seat[name]]
+        position = seat_to_position[player_seat[name]]
+        players_hands_data[name]["position"] = position
+        players_hands_data[name]["position_name"] = position_to_name[(position,number_players)]
         players_hands_data[name]["profit"] = player_profit[name]
         if name in player_cards : players_hands_data[name]["cards"] = player_cards[name]
-    for name in preflop_participation : players_hands_data[name]["vpip"] = 1
+    if preflop_participation:
+        for name in preflop_participation : players_hands_data[name]["vpip"] = 1
+    else :
+        players_hands_data[BB_player]["participed"] = 0 # If everyone folds, BB wins but doesn't take any decision in the game
     for name in preflop_raisers : players_hands_data[name]["pfr"] = 1
-    for name in preflop_limp: players_hands_data[name]["limp"] = 1
-    for name in preflop_2bet : players_hands_data[name]["two_bet"] = 1
+
 
     players_hands_data = dict(players_hands_data) #Use dict in order to transform the defaultdic object
 

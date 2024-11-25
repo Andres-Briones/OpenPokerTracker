@@ -48,7 +48,8 @@ def init_db(db_path):
                 hands INTEGER, -- player hands
                 vpip REAL,
                 pfr REAL,
-                win_rate REAL
+                win_rate REAL,
+                af REAL -- Aggressive factor = (raises + bets) / calls
                 -- We will add more statistics later
             );
             CREATE TABLE IF NOT EXISTS players_hands (
@@ -56,11 +57,18 @@ def init_db(db_path):
                 hand_id INTEGER,
                 cards TEXT,
                 position INT,
+                position_name TEXT,
                 profit DECIMAL,
+                participed BOOLEAN,
                 vpip BOOLEAN,
                 pfr BOOLEAN,
+                aggressive INT,
+                passive INT,
+                two_bet_possibility BOOLEAN,
                 limp BOOLEAN,
                 two_bet BOOLEAN,
+                three_bet_possibility BOOLEAN,
+                three_bet BOOLEAN,
                 FOREIGN KEY (player_id) REFERENCES players(id)
                 FOREIGN KEY (hand_id) REFERENCES hands(id)
             PRIMARY KEY (player_id, hand_id)  -- Ensures each player can participate in each hand only once
@@ -215,13 +223,64 @@ def update_players_statistics(db_path):
         """)
         conn.commit()
 
-def get_players_statistics(db_path):
-    """Retrieves statistics for all players from the database."""
+def get_players_list(db_path):
+    """Retrieves players from the database."""
     with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT name, hands, vpip, pfr, win_rate from players ORDER BY hands DESC")
-        players_stats = cursor.fetchall()
-        return players_stats
+        players = cursor.fetchall()
+        return players
+
+def get_player_statistics_per_position(db_path, player_name, min_players=2, max_players=6):
+    """Retrieves statistics grouped by position for the given players from the database."""
+    with get_db_connection(db_path) as conn:
+        cursor = conn.cursor()
+        query = f"""
+        SELECT 
+        ph.position_name AS position,
+        COUNT(ph.hand_id) AS hands,
+        ROUND(CAST(SUM(ph.vpip) AS FLOAT) / CAST(SUM(ph.participed) AS FLOAT)*100,2) AS VPIP,
+        ROUND(CAST(SUM(ph.pfr) AS FLOAT) / CAST(SUM(ph.participed) AS FLOAT)*100,2) AS PFR,
+        ROUND(CAST(SUM(ph.aggressive) AS FLOAT) / CAST(SUM(ph.passive) AS FLOAT),2) AS AF,
+        ROUND(CAST(SUM(ph.two_bet) AS FLOAT) / CAST(SUM(ph.two_bet_possibility) AS FLOAT)*100,2) AS two_bet,
+        ROUND(CAST(SUM(ph.limp) AS FLOAT) / CAST(SUM(ph.two_bet_possibility) AS FLOAT)*100,2) AS limp,
+        ROUND(CAST(SUM(ph.three_bet) AS FLOAT) / CAST(SUM(ph.three_bet_possibility) AS FLOAT)*100,2) AS three_bet,
+        ROUND(AVG(profit) / h.big_blind_amount,2) AS bb_per_hand,
+        h.number_players AS N_players
+        FROM players_hands ph JOIN hands h ON h.id == ph.hand_id JOIN players p ON p.id == ph.player_id
+        WHERE p.name == "{player_name}" AND h.number_players >= {min_players} AND  h.number_players <= {max_players} 
+        GROUP BY position_name 
+        ORDER BY ph.position DESC
+        """
+        cursor.execute(query)
+        player_stats = cursor.fetchall()
+        return player_stats
+
+
+def get_player_full_statistics(db_path, player_name, min_players=2, max_players=6):
+    """Retrieves statistics grouped by position for the given players from the database."""
+    with get_db_connection(db_path) as conn:
+        cursor = conn.cursor()
+        query = f"""
+        SELECT 
+        COUNT(ph.hand_id) AS hands,
+        ROUND(CAST(SUM(ph.vpip) AS FLOAT) / CAST(SUM(ph.participed) AS FLOAT)*100,2) AS VPIP,
+        ROUND(CAST(SUM(ph.pfr) AS FLOAT) / CAST(SUM(ph.participed) AS FLOAT)*100,2) AS PFR,
+        ROUND(CAST(SUM(ph.aggressive) AS FLOAT) / CAST(SUM(ph.passive) AS FLOAT),2) AS AF,
+        ROUND(CAST(SUM(ph.two_bet) AS FLOAT) / CAST(SUM(ph.two_bet_possibility) AS FLOAT)*100,2) AS two_bet,
+        ROUND(CAST(SUM(ph.limp) AS FLOAT) / CAST(SUM(ph.two_bet_possibility) AS FLOAT)*100,2) AS limp,
+        ROUND(CAST(SUM(ph.three_bet) AS FLOAT) / CAST(SUM(ph.three_bet_possibility) AS FLOAT)*100,2) AS three_bet,
+        ROUND(AVG(profit) / h.big_blind_amount,2) AS bb_per_hand,
+        h.number_players AS N_players
+        FROM players_hands ph JOIN hands h ON h.id == ph.hand_id JOIN players p ON p.id == ph.player_id
+        WHERE p.name == "{player_name}" AND h.number_players >= {min_players} AND  h.number_players <= {max_players} 
+        """
+        cursor.execute(query)
+        player_stats = cursor.fetchone()
+
+        return player_stats
+
+
 
 def get_player_profit_historique(player_name, db_path):
     with get_db_connection(db_path) as conn:

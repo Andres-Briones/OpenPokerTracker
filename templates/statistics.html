@@ -5,29 +5,24 @@
 {% block content %}
 <h2>Statistics</h2>
 
-<div class="mainContainerColumn">
-    <div id="tableContainer" >
+<div class="mainContainerColumn" >
+    <div class="mainContainer">
+    <div id="tableContainer" style="width: 25% ">
         <table style="width: 100%; border-collapse: collapse ; table-layout : fixed;  margin: 0; ">
             <thead style="position: sticky; top: 0; z-index: 1;">
                 <tr>
                     <th>Name</th>
                     <th>Hands</th>
-                    <th>VPIP (%)</th>
-                    <th>PFR (%)</th>
-                    <th>Win rate ($ / 100 hands)
                 </tr>
             </thead>
         </table>
-        <div style = "width: 100%; overflow-y: auto; max-height: 300px;">
+        <div style = "width: 100%; overflow-y: auto; max-height: 500px;">
             <table style="width: 100%; border-collapse: collapse ; table-layout : fixed;  margin: 0; ">
                 <tbody>
-                    {% for stat in stats %}
-                    <tr class="clickable-row" onclick="location.href='{{ url_for('statistics.statistics', selected_player=stat.name) }}'">
-                        <td>{{ stat.name }}</td>
-                        <td>{{ stat.hands }}</td>
-                        <td>{{ stat.vpip | round(2) }}</td>
-                        <td>{{ stat.pfr | round(2) }}</td>
-                        <td>{{ stat.win_rate | round(2) }}</td>
+                    {% for player in players%}
+                    <tr class="clickable-row" onclick="location.href='{{ url_for('statistics.statistics', selected_player=player.name) }}'">
+                        <td>{{ player.name }}</td>
+                        <td>{{ player.hands }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -51,10 +46,111 @@
             <span id="windowSizeValue">10</span>  <!-- Display slider value -->
         </label>
         {% else %}
-            <div style="margin:10px">Select a player to view their statistics.</div>
+        <div style="margin:10px">Select a player to view their statistics.</div>
         {% endif %}
     </div>
 
+    </div>
+
+    <div id="tableContainer" style="width: 200% ">
+        <h3> Player Statistics per Position (for 4 to 6 players) </h3>
+        {% if selected_player %}
+        <table style="width: 100%; border-collapse: collapse ; top-margin: 2px; ">
+            <thead style="position: sticky; top: 0; z-index: 1;">
+                <tr>
+                    <th>Position</th>
+                    <th>Hands</th>
+                    <th>VPIP (%)</th>
+                    <th>PFR (%)</th>
+                    <th>AF</th>
+                    <th>2bet (%)</th>
+                    <th>limp (%)</th>
+                    <th>3bet (%)</th>
+                    <th>Win rate (bb/hand)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in position_stats %}
+                <tr>
+                    <td>{{ p.position}}</td>
+                    <td>{{ p.hands }}</td>
+                    <td>{{ p.VPIP}}</td>
+                    <td>{{ p.PFR}}</td>
+                    <td>{{ p.AF}}</td>
+                    <td>{{ p.two_bet}}</td>
+                    <td>{{ p.limp}}</td>
+                    <td>{{ p.three_bet}}</td>
+                    <td>{{ p.bb_per_hand }}</td>
+                </tr>
+                {% endfor %}
+
+                <tr>
+                    <td> Overall </td>
+                    <td>{{ player_stats.hands }}</td>
+                    <td>{{ player_stats.VPIP}}</td>
+                    <td>{{ player_stats.PFR}}</td>
+                    <td>{{ player_stats.AF}}</td>
+                    <td>{{ player_stats.two_bet}}</td>
+                    <td>{{ player_stats.limp}}</td>
+                    <td>{{ player_stats.three_bet}}</td>
+                    <td>{{ player_stats.bb_per_hand }}</td>
+                </tr>
+            </tbody>
+        </table>
+        {% else %}
+        <div style="margin:10px">Select a player to view their statistics.</div>
+        {% endif %}
+    </div>
+
+    <div id="tableContainer" style="width: 200% ">
+        <h3> Player Statistics per Position (2 or 3 players) </h3>
+        {% if selected_player %}
+        <table style="width: 100%; border-collapse: collapse ; top-margin: 2px; ">
+            <thead style="position: sticky; top: 0; z-index: 1;">
+                <tr>
+                    <th>Position</th>
+                    <th>Hands</th>
+                    <th>VPIP (%)</th>
+                    <th>PFR (%)</th>
+                    <th>AF</th>
+                    <th>2bet (%)</th>
+                    <th>limp (%)</th>
+                    <th>3bet (%)</th>
+                    <th>Win rate (bb/hand)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in position_stats_short %}
+                <tr>
+                    <td>{{ p.position}}</td>
+                    <td>{{ p.hands }}</td>
+                    <td>{{ p.VPIP}}</td>
+                    <td>{{ p.PFR}}</td>
+                    <td>{{ p.AF}}</td>
+                    <td>{{ p.two_bet}}</td>
+                    <td>{{ p.limp}}</td>
+                    <td>{{ p.three_bet}}</td>
+                    <td>{{ p.bb_per_hand }}</td>
+                </tr>
+                {% endfor %}
+
+                <tr>
+                    <td> Overall </td>
+                    <td>{{ player_stats_short.hands }}</td>
+                    <td>{{ player_stats_short.VPIP}}</td>
+                    <td>{{ player_stats_short.PFR}}</td>
+                    <td>{{ player_stats_short.AF}}</td>
+                    <td>{{ player_stats_short.two_bet}}</td>
+                    <td>{{ player_stats_short.limp}}</td>
+                    <td>{{ player_stats_short.three_bet}}</td>
+                    <td>{{ player_stats_short.bb_per_hand }}</td>
+                </tr>
+            </tbody>
+        </table>
+        {% else %}
+        <div style="margin:10px">Select a player to view their statistics.</div>
+        {% endif %}
+    </div>
 
     <div class="plotContainer" >
         <h3>Player Opening Range </h3>
@@ -67,7 +163,7 @@
             <div style="margin:10px">Select a player to view their opening range.</div>
         {% endif %}
     </div>
-    
+
 </div>
 
 <script>
