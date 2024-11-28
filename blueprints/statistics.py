@@ -25,7 +25,7 @@ def statistics():
 
     if selected_player :
         position_stats = get_player_statistics_per_position(db_path, selected_player, min_players = 4)
-        position_stats_short = get_player_statistics_per_position(db_path, selected_player, max_players = 4)
+        position_stats_short = get_player_statistics_per_position(db_path, selected_player, max_players = 3)
         player_stats = get_player_full_statistics(db_path, selected_player, min_players = 4)
         player_stats_short = get_player_full_statistics(db_path, selected_player, max_players = 3)
 
