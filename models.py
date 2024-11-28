@@ -40,6 +40,11 @@ def init_db(db_path):
                 big_blind_amount DECIMAL,
                 observed BOOLEAN,
                 hero_name TEXT, -- The hero name can change for example if user has different usernames in different platforms
+                hero_cards TEXT,
+                hero_hand_class TEXT,
+                hero_position TEXT,
+                hero_profit REAL,
+                players TEXT, -- Players that participated in the hand (hero can be absent of the list if the hand is observed)
                 ohh_data TEXT  -- JSON blob to store the full ohh object
             );
             CREATE TABLE IF NOT EXISTS players (
@@ -56,6 +61,7 @@ def init_db(db_path):
                 player_id INTEGER,
                 hand_id INTEGER,
                 cards TEXT,
+                hand_class TEXT,
                 position INT,
                 position_name TEXT,
                 profit DECIMAL,
@@ -171,8 +177,26 @@ def save_hands_bulk(hand_data_list, db_path):
 
     return
 
-
 def load_hands_from_db(db_path):
+    """Loads all hands from the database for display or analysis."""
+    with get_db_connection(db_path) as conn:
+        cursor = conn.cursor()
+        query = """
+        SELECT id,
+               table_name,
+               date_time,
+               hero_cards,
+               hero_position,
+               hero_profit
+        FROM hands
+        ORDER BY date_time DESC
+        """
+        cursor.execute(query)
+        hands = cursor.fetchall()
+        
+    return hands
+
+def load_hands_from_db_old(db_path):
     """Loads all hands from the database for display or analysis."""
     with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
@@ -257,7 +281,7 @@ def get_player_statistics_per_position(db_path, player_name, min_players=2, max_
         FROM players_hands ph JOIN hands h ON h.id == ph.hand_id JOIN players p ON p.id == ph.player_id
         WHERE p.name == "{player_name}" AND h.number_players >= {min_players} AND  h.number_players <= {max_players} 
         GROUP BY position_name 
-        ORDER BY ph.position DESC
+        ORDER BY MAX(ph.position) DESC
         """
         cursor.execute(query)
         player_stats = cursor.fetchall()

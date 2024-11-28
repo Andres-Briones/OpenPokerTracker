@@ -4,6 +4,7 @@ from io import BytesIO
 from matplotlib.figure import Figure
 import numpy as np
 import seaborn as sns
+from utils.cards_utils import cardsToClass
 
 
 def generate_cummulative_profit_plot(player_name, db_path, window_size = 10):
@@ -30,26 +31,15 @@ def generate_cummulative_profit_plot(player_name, db_path, window_size = 10):
     return img
 
 
-def cardsToClass(cards):
-    cards = cards.split (' ')
-    handClass = ''
-    if cards[0][1] == cards[1][1] :
-        handClass = 's'
-    elif cards[0][0] != cards[1][0] :
-            handClass = 'o'
-    handClass = cards[0][0] + cards[1][0] + handClass
-    return handClass
-
 # Returns a dictionnary of the type hand_class : probability
 def get_hand_class_stats(player_name, db_path, position = None):
     hands = []
     with sqlite3.connect(db_path) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM players WHERE name == ?", (player_name,))
-        hero_id = cursor.fetchone()[0]
+        player_id = cursor.fetchone()[0]
         
-        data = pd.read_sql(f"SELECT cards, position, vpip, pfr, limp, two_bet, h.number_players FROM players_hands JOIN hands h ON h.id == hand_id WHERE player_id == {hero_id} AND cards IS NOT NULL ",conn)    
-        data["hand_class"] = data["cards"].apply(cardsToClass)
+        data = pd.read_sql(f"SELECT hand_class, position, vpip, pfr, limp, two_bet, h.number_players FROM players_hands JOIN hands h ON h.id == hand_id WHERE player_id == {player_id} AND hand_class IS NOT NULL ",conn)    
 
         if position :
             data = data[data["position"] == position]

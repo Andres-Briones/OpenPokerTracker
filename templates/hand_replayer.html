@@ -101,7 +101,7 @@ function populateHandsMenu(handsList) {
     handsList.forEach((hand, index) => {
         const option = document.createElement('option');
         option.value = hand.id;
-        option.textContent = `${hand.hero_cards} |  ${hand.date_time} |  ${hand.table_name} | ${hand.position} | ${hand.profit}`;
+        option.textContent = `${hand.hero_cards ? hand.hero_cards : 'Obs'} |  ${hand.date_time} |  ${hand.table_name} | ${hand.hero_position ? hand.hero_position : '-'} | ${hand.hero_profit == null ?  '-' : hand.hero_profit}`;
         handSelect.appendChild(option);
     });
 }

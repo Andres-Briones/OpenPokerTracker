@@ -1,18 +1,8 @@
 from collections import defaultdict
 import numpy as np
 from datetime import datetime
+from utils.cards_utils import cardsToClass, getCardSymbol, cardsListToString
 
-def getCardSymbol(card):
-    suitSymbols = {
-        'h': '♥', 
-        's': '♠', 
-        'd': '♦', 
-        'c': '♣'  
-    }
-    return card[0]+ suitSymbols[card[1]]
-
-def cardsListToString(cards):
-    return " ".join([getCardSymbol(card) for card in cards])
 
 def parse_hand_at_upload(ohh_obj):
     #Extract general info necessary for hand insertion in table
@@ -59,6 +49,7 @@ def parse_hand_at_upload(ohh_obj):
     # IMPORTANT : players_hands_dics need to have the same  keys as the row names in players_hands table
     players_hands_data = defaultdict(lambda:
                              {"cards": None,
+                              "hand_class": None,
                               "position": 0,
                               "position_name": None,
                               "profit": 0,
@@ -152,13 +143,17 @@ def parse_hand_at_upload(ohh_obj):
 
     for name in game_participation :
         # Generate input for player in players_hands_data if player is not observer 
-        players_hands_data[name]["participed"] = 1 # This wil
+        players_hands_data[name]["participed"] = 1 
         # positon =  (seat - dealer_seat - 1)% table_size 
         position = seat_to_position[player_seat[name]]
         players_hands_data[name]["position"] = position
         players_hands_data[name]["position_name"] = position_to_name[(position,number_players)]
         players_hands_data[name]["profit"] = player_profit[name]
-        if name in player_cards : players_hands_data[name]["cards"] = player_cards[name]
+        if name in player_cards :
+            cards = player_cards[name]
+            players_hands_data[name]["cards"] = cards
+            players_hands_data[name]["hand_class"] = cardsToClass(cards)
+
     if preflop_participation:
         for name in preflop_participation : players_hands_data[name]["vpip"] = 1
     else :
@@ -176,12 +171,21 @@ def parse_hand_at_upload(ohh_obj):
         "table_size" : table_size,
         "number_players" : number_players,
         "hero_name" : hero_name,
+        "hero_position" : None, 
+        "hero_position" : None,
+        "hero_profit" : None,
         "table_name" : ohh_data["table_name"],
         "small_blind_amount" : ohh_data["small_blind_amount"],
         "big_blind_amount" : ohh_data["big_blind_amount"],
         "site_name" : ohh_data["site_name"],
-        "observed" : observed
+        "observed" : observed,
+        "players" : ", ".join(game_participation)
         }
+    if not observed: # Redundant data but it makes some queries faster
+        hands_data["hero_position"] = players_hands_data[hero_name]["position_name"]
+        hands_data["hero_cards"] = players_hands_data[hero_name]["cards"]
+        hands_data["hero_hand_class"] = players_hands_data[name]["hand_class"]
+        hands_data["hero_profit"] = players_hands_data[hero_name]["profit"]
 
     return hands_data, players_hands_data
 
