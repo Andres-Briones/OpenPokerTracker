@@ -12,6 +12,7 @@ def parse_hand_at_upload(ohh_obj):
     date_time = datetime.strptime(ohh_data["start_date_utc"], "%Y-%m-%dT%H:%M:%SZ")
     date_time = date_time.strftime("%Y-%m-%d %H:%M:%S")
     table_size = ohh_data["table_size"]
+    flop = False # Stores if there is a flop in the hand or not
 
     # Set players_hands_data to None if anonymous game
     # If players_hands_data is None, the hand will be skipped
@@ -21,14 +22,13 @@ def parse_hand_at_upload(ohh_obj):
     # Extract players and rounds
     players = ohh_data['players']
     rounds = ohh_data['rounds']
+    pots = ohh_data['pots']
 
     # Map player IDs to names for easy reference
     id_to_name = {p['id']: p['name'] for p in players}
 
     hero_name = id_to_name.get(hero_id, None)
     observed = True if hero_name is None else False
-    if observed: print(f"Game {game_number} is observed" )
-
 
     # Extract dealer seat
     dealer_seat = ohh_data["dealer_seat"]
@@ -44,8 +44,9 @@ def parse_hand_at_upload(ohh_obj):
         player_seat[name] = player["seat"]
 
 
+
+
     # Generate dict to store statistical data for each player 
-    # TODO add more counters like 3bet, fold/call to 2-bet etc
     # IMPORTANT : players_hands_dics need to have the same  keys as the row names in players_hands table
     players_hands_data = defaultdict(lambda:
                              {"cards": None,
@@ -53,6 +54,7 @@ def parse_hand_at_upload(ohh_obj):
                               "position": 0,
                               "position_name": None,
                               "profit": 0,
+                              "rake" : 0,
                               "participed" : 0,
                               "vpip": 0,
                               "pfr": 0,
@@ -111,6 +113,7 @@ def parse_hand_at_upload(ohh_obj):
                     preflop_raisers.add(player_name) 
 
             else :
+                flop = True
                 if action_type in ["Bet", "Raise"]:
                     players_hands_data[player_name]["aggressive"] += 1
                 elif  action_type == "Call" :
@@ -160,6 +163,12 @@ def parse_hand_at_upload(ohh_obj):
         players_hands_data[BB_player]["participed"] = 0 # If everyone folds, BB wins but doesn't take any decision in the game
     for name in preflop_raisers : players_hands_data[name]["pfr"] = 1
 
+    #Extract contributed rake
+    for pot in pots :
+        for pw in pot['player_wins']:
+            name = id_to_name[pw['player_id']]
+            new_rake = float(players_hands_data[name]["rake"]) + float(pw['contributed_rake'])
+            players_hands_data[name]["rake"] = '%g' % new_rake 
 
     players_hands_data = dict(players_hands_data) #Use dict in order to transform the defaultdic object
 
@@ -179,12 +188,13 @@ def parse_hand_at_upload(ohh_obj):
         "big_blind_amount" : ohh_data["big_blind_amount"],
         "site_name" : ohh_data["site_name"],
         "observed" : observed,
+        "flop" : flop,
         "players" : ", ".join(game_participation)
         }
     if not observed: # Redundant data but it makes some queries faster
         hands_data["hero_position"] = players_hands_data[hero_name]["position_name"]
         hands_data["hero_cards"] = players_hands_data[hero_name]["cards"]
-        hands_data["hero_hand_class"] = players_hands_data[name]["hand_class"]
+        hands_data["hero_hand_class"] = players_hands_data[hero_name]["hand_class"]
         hands_data["hero_profit"] = players_hands_data[hero_name]["profit"]
 
     return hands_data, players_hands_data

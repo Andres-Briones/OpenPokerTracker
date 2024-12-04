@@ -44,6 +44,7 @@ def init_db(db_path):
                 hero_hand_class TEXT,
                 hero_position TEXT,
                 hero_profit REAL,
+                flop BOOLEAN, -- if there was a flop or not
                 players TEXT, -- Players that participated in the hand (hero can be absent of the list if the hand is observed)
                 ohh_data TEXT  -- JSON blob to store the full ohh object
             );
@@ -65,6 +66,7 @@ def init_db(db_path):
                 position INT,
                 position_name TEXT,
                 profit DECIMAL,
+                rake DECIMAL,
                 participed BOOLEAN,
                 vpip BOOLEAN,
                 pfr BOOLEAN,
@@ -276,8 +278,7 @@ def get_player_statistics_per_position(db_path, player_name, min_players=2, max_
         ROUND(CAST(SUM(ph.two_bet) AS FLOAT) / CAST(SUM(ph.two_bet_possibility) AS FLOAT)*100,2) AS two_bet,
         ROUND(CAST(SUM(ph.limp) AS FLOAT) / CAST(SUM(ph.two_bet_possibility) AS FLOAT)*100,2) AS limp,
         ROUND(CAST(SUM(ph.three_bet) AS FLOAT) / CAST(SUM(ph.three_bet_possibility) AS FLOAT)*100,2) AS three_bet,
-        ROUND(AVG(profit) / h.big_blind_amount,2) AS bb_per_hand,
-        h.number_players AS N_players
+        ROUND(AVG(profit) / h.big_blind_amount,2) AS bb_per_hand
         FROM players_hands ph JOIN hands h ON h.id == ph.hand_id JOIN players p ON p.id == ph.player_id
         WHERE p.name == "{player_name}" AND h.number_players >= {min_players} AND  h.number_players <= {max_players} 
         GROUP BY position_name 
@@ -301,8 +302,12 @@ def get_player_full_statistics(db_path, player_name, min_players=2, max_players=
         ROUND(CAST(SUM(ph.two_bet) AS FLOAT) / CAST(SUM(ph.two_bet_possibility) AS FLOAT)*100,2) AS two_bet,
         ROUND(CAST(SUM(ph.limp) AS FLOAT) / CAST(SUM(ph.two_bet_possibility) AS FLOAT)*100,2) AS limp,
         ROUND(CAST(SUM(ph.three_bet) AS FLOAT) / CAST(SUM(ph.three_bet_possibility) AS FLOAT)*100,2) AS three_bet,
-        ROUND(AVG(profit) / h.big_blind_amount,2) AS bb_per_hand,
-        h.number_players AS N_players
+        ROUND(SUM(CASE WHEN profit > 0 THEN profit ELSE 0 END) + SUM(rake), 2) AS total_won,
+        ROUND(SUM(CASE WHEN profit < 0 THEN profit ELSE 0 END),2) AS total_lost,
+        ROUND(SUM(rake),2) AS total_rake,
+        ROUND(SUM(profit),2) AS profit,
+        ROUND(AVG(rake)/h.big_blind_amount*100,2) AS rake_bb_per_100hand,
+        ROUND(AVG(profit)/h.big_blind_amount*100,2) AS bb_per_hand
         FROM players_hands ph JOIN hands h ON h.id == ph.hand_id JOIN players p ON p.id == ph.player_id
         WHERE p.name == "{player_name}" AND h.number_players >= {min_players} AND  h.number_players <= {max_players} 
         """
