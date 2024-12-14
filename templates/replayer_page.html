@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Hand Replayer{% endblock %}
+{% block content %}
+
+<!-- Centered Title -->
+<h2>Poker Hand Replayer</h2>
+
+<!-- Flex Container for Main Content -->
+<div class="main-container">
+
+    <!-- Left Sidebar for Upload and Hands Menu -->
+    <div id="hands-container" >
+        <div class = "box" id = "handsMenu">
+            <h3>Select a Hand</h3>
+            <!-- Search bar -->
+            <input id="search-bar" type="text"
+                   name="filter" hx-get="/replayer/search" hx-trigger="keyup changed delay:500ms" hx-target="#hands_table"
+                   placeholder="Search for hand class, table name or player">
+            <!-- Hands Table -->
+            <div id = "hands_table" style="display: flex; flex-direction: column;  align-items: center;">
+                {% include "hands_table.html" %}
+            </div>
+        </div>
+        <!-- Upload hand button -->
+        <form hx-encoding="multipart/form-data"
+              hx-target="#hands_table"
+              hx-post="/replayer/upload"
+              hx-trigger="change from:#handFile">
+
+            <input type="file" id="handFile" name="file" multiple style="display:none;">
+
+            <button type="button" onclick="document.getElementById('handFile').click();">
+                Upload file(s)
+            </button>
+        </form>
+    </div>
+
+    <!-- Right Section for Hand replayer and Info -->
+    <div id="hand-replayer-container">
+        {% if hand %}
+        {%include "hand_replayer.html" %}
+        {% else %}
+        <div class="box">
+            <h3> Choose a Hand </h3>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+
+<!-- Specific styles for the page -->
+<style> 
+#hands-container {
+    flex : 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+#search-bar {
+    margin-bottom: 10px;
+    width: 400px;
+}
+
+#navigation-buttons-container {
+    display: flex;
+    justify-content: center;
+    margin: 20px;
+}
+
+#navigation-buttons-container button {
+    width: 120px;
+}
+
+#hand-replayer-container {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+</style>
+
+{% endblock %}

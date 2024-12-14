@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, session, current_app
 from flask_session import Session
 from config import Config
-from blueprints.hand_replayer import hand_replayer_bp
+from blueprints.replayer import replayer_bp
 from blueprints.statistics import statistics_bp
 from blueprints.uploads import uploads_bp
 from models import init_db
@@ -12,7 +12,7 @@ def create_app():
     Session(app)
 
     # Register blueprints
-    app.register_blueprint(hand_replayer_bp, url_prefix='/replayer')
+    app.register_blueprint(replayer_bp, url_prefix='/replayer')
     app.register_blueprint(statistics_bp, url_prefix='/statistics')
     app.register_blueprint(uploads_bp, url_prefix='/')
 

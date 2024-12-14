@@ -1,0 +1,25 @@
+<div> Number of hands : {{total_count}}</div>
+<table style="width: 100%; border-collapse: collapse ; table-layout : fixed;  margin-top: 10px; ">
+    <thead style="position: sticky; top: 0; z-index: 1;">
+        <tr>
+            <th>Cards</th>
+            <th>Date-time</th>
+            <th>Table name</th>
+            <th>Profit</th>
+        </tr>
+    </thead>
+</table>
+<div style = "display: flex; align-items:center; flex-direction: column; width: 100%; overflow-y: auto; max-height: 500px;">
+    <table style="width: 100%; border-collapse: collapse ; table-layout : fixed;  margin: 0; ">
+        <tbody id="hands_list">
+            {% include "hands_list.html" %}
+        </tbody>
+    </table>
+    <!-- Sentinel div for infinite scroll -->
+    <div hx-get="/replayer/load_next_page"
+         hx-trigger="intersect"
+         hx-swap="beforeend"
+         hx-target="#hands_list"
+         style="height: 20px;">
+    </div>
+</div>

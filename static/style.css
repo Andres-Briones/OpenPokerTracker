@@ -10,8 +10,7 @@
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #f0f4f8;
-    margin-left: 100px;
-    padding: 20px;
+    padding: 0;
     color: #333;
 }
 
@@ -57,59 +56,42 @@ footer{
     color: white;
 }
 
-
 .main-content {
     display: flex;
     flex-direction: column;
-    padding: 20px;
-    margin: 0 auto;
-    align-items: left;
-}
+    margin: 20px auto;
+    align-items: center;
 
-/* Centered Title */
 h2 {
     color: #2c3e50;
     margin-bottom: 30px;
-    font-size: 28px;
+    font-size: 35px;
     font-weight: bold;
     text-align: center;
 }
 
 /* Main Container for Flex Layout */
-.mainContainer {
+.main-container {
     display: flex;
     flex-direction: row;
+    gap: 50px;
     align-items: flex-start;
-    width: 100%;
-    gap: 100px;
-    justify-content: center;
 }
 
-
-/* Sidebar Styling */
-#sidebar {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    width: 400px;
-}
-
-.selection {
+.box {
     display:flex;
     flex-direction: column;
-    width: 100%;
+    align-items: center;
     background-color: white;
     padding: 15px;
     border-radius: 10px;
     box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-    text-align: left;
     margin-bottom: 20px;
-    align-items: center;
 }
 
-.selection h3 {
+.box h3 {
     color: #2c3e50;
-    font-size: 20px;
+    font-size: 30px;
     margin-bottom: 10px;
     font-weight: bold;
 }
@@ -162,43 +144,14 @@ h2 {
     border: 1px solid #ddd;
 }
 
-/* Upload Section */
-#uploadSection {
-    width: 100%;
-    margin-top: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-#uploadSection input[type="file"] {
-    display: none;
-}
-
-#uploadSection label {
-    background-color: #1abc9c;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s;
-}
-
-#uploadSection label:hover {
-    background-color: #16a085;
-}
-
 button {
     background-color: #1abc9c;
     color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
+    margin: 0 10px;
     font-size: 16px;
+    padding: 12px;
+    border-radius: 10px;
     transition: background-color 0.3s;
-    margin-top: 10px;
 }
 
 button:hover {
@@ -207,34 +160,6 @@ button:hover {
 
 
 /* Game Info Container on Right */
-#gameInfoContainer {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-}
-
-/* Game Info Section */
-#gameInfo {
-    background: white;
-    width: 100%;
-    max-width: 800px;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
-    margin-top: 20px;
-    text-align: center;
-}
-
-#gameInfo p {
-    font-size: 18px;
-    margin: 8px 0;
-    font-weight: 500;
-}
-
-#gameInfo strong {
-    color: #2c3e50;
-}
 
 /* Table Styles */
 table {
@@ -254,6 +179,7 @@ table, th, td {
     border: 1px solid #ddd;
 }
 
+
 th, td {
     padding: 15px;
     text-align: center;
@@ -271,73 +197,11 @@ th {
     background-color: #2980b9;
 }
 
-/* Final Pot Information Styling */
-#potInfo {
-    margin-top: 30px;
-    text-align: center;
+tr.highlighted-row {
+    background-color: #e0f0ff; 
+    color: #2c3e50;
 }
 
-#potInfo h3 {
-    font-size: 22px;
-    margin-bottom: 15px;
-    color: #34495e;
-}
-
-#potInfo p {
-    font-size: 18px;
-    font-weight: 500;
-    color: #555;
-}
-
-.pot-summary {
-    font-size: 20px;
-    font-weight: bold;
-    color: #333;
-}
-
-/* Winner Table */
-#potWinnersTable th {
-    background-color: #27ae60;
-    color: white;
-}
-
-#potWinnersTable tr:nth-child(even) {
-    background-color: #e8f5e9;
-}
-
-/* Navigation Button Styles */
-.navigation-buttons {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-
-.loadDelete-buttons {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-
-.navigation-buttons button {
-    background-color: #1abc9c;
-    margin: 0 10px;
-    width: 120px;
-    font-size: 16px;
-    padding: 12px;
-    border-radius: 5px;
-    transition: background-color 0.3s;
-}
-
-.navigation-buttons button:hover {
-    background-color: #16a085;
-}
-
-/* Add styling for card images */
-.card-image {
-    width: 80px; /* Set width as desired */
-    height: auto; /* Maintain aspect ratio */
-    margin: 5px; /* Optional: add space between cards */
-}
 
 .mainContainerColumn {
     display: flex;

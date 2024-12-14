@@ -4,13 +4,14 @@
         <meta charset="UTF-8">
         <title>{% block title %}Poker App{% endblock %}</title>
         <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+        <script src="https://unpkg.com/htmx.org@1.9.4"></script>
     </head>
     <body>
         <header>
             <nav class="navbar">
                 <ul class="menu">
                     <li><a href="{{ url_for('uploads.index') }}">Home</a></li>
-                    <li><a href="{{ url_for('hand_replayer.hand_replayer') }}">Hand Replayer</a></li>
+                    <li><a href="{{ url_for('replayer.replayer') }}">Hand Replayer</a></li>
                     <li><a href="{{ url_for('statistics.statistics') }}">Statistics</a></li>
                 </ul>
             </nav>
@@ -22,6 +23,7 @@
         <footer>
             <p>&copy; 2024 Briones Andrés</p>
         </footer>
+        <script src="{{ url_for('static', filename='js/table_navigation.js') }}"></script>
     </body>
 </html>
 

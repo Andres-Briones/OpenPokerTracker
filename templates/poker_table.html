@@ -1,0 +1,175 @@
+
+<style>
+
+.game-container {
+    position: relative;
+    width: 850px;
+    height: 450px;
+    background: radial-gradient(circle, #006400 60%, #004d00 100%);
+    border-radius: 50%;
+    margin-bottom: 60px;
+    margin-top: 90px;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.5);
+    z-index: 0;  
+}
+
+/* Player styling */
+.player {
+    position: absolute;
+    transform: translate(-50%,-50%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    color: white;  /* Player name and text color */
+    font-weight: bold;
+    padding: 10px;
+    z-index: 0;
+}
+
+.player-box {
+    z-index: 2;
+    width: 180px;  
+    height: 60px; 
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.7);  /* Black with 70% opacity */
+    border-radius: 12px;  /* Rounded corners */
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.6);  /* Optional shadow for depth */
+    z-index: 1
+}
+
+.player-cards {
+    position: absolute;
+    top: -52px;  /* Push cards slightly upwards */
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    z-index: 0;  /* Position cards behind the box */
+}
+
+.player-cards img {
+    height: 110px; /* Adjust the card size */
+}
+
+.player-name {
+    font-size: 14px;
+    z-index: 2;
+}
+
+.player-stack {
+    font-size: 14px;
+    z-index: 2;
+}
+
+
+.playerBet {
+    position: absolute;
+    transform: translate(-50%,-50%);
+    color: white; /* Text color */
+    font-weight: bold;
+}
+
+.dealer-button{
+    display: flex;
+    position: absolute;
+    justify-content: center;
+    align-items: center;
+    width: 30px;  
+    height: 30px; 
+    transform: translate(-50%,-50%);
+    background: linear-gradient(145deg, #ffffff, #d1d1d1);
+    border-radius: 50%;
+    border: 3px solid #000;
+    font-weight: bold;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #000;
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2); 
+    z-index: 1;
+}
+
+/* Community cards container */
+.community-cards {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 10px;
+}
+
+.card {
+    height: 110px;
+    object-fit: cover;
+    z-index: -1;  /* Position cards behind the box */
+}
+
+/* Pot information below the table */
+.pot {
+    position: absolute;
+    top: 65%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 20px;
+    color: #fff;
+    font-weight: bold;
+}
+
+#street{
+    margin-top: 10px;
+}
+
+</style>
+
+<h3>{{general_data.table_name}} table</h3>
+<div id="stakes"> Blinds: {{general_data.small_blind_amount}} / {{general_data.big_blind_amount}}</div>
+<div id="street">Street : {{gamestate.street}}</div>
+<div class="game-container">
+    {% for player in gamestate.players %}
+    <div class="player"
+         style="left: calc(50% + ( 50% * {{cos(-player.angle)}} ));
+                top: calc(50% - ( 50% * {{sin(-player.angle)}} ));">
+        <div class="player-box"></div>
+        <div class="player-name">{{player.name}}</div>
+        <div class="player-stack">{{player.chips|round(2)}} BB</div>
+        <div class="player-cards">
+            {% for card in player.cards %}
+            <img class="cards" src ="../static/images/cards/{{card}}.png" alt="Card">
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if player.dealer %}
+    <div class="dealer-button"
+         style="left: calc(50% + ( 32% * {{cos(-player.angle+0.2)}} ));
+                top: calc(45% - ( 32% * {{sin(-player.angle+0.2)}} ));">
+        D
+    </div>
+    {% endif %}
+
+    {% if player.bet > 0%}
+    <div class="playerBet"
+         style="left: calc(50% + ( 32% * {{cos(-player.angle)}} ));
+                top: calc(45% - ( 32% * {{sin(-player.angle)}} ));">
+                 {{player.bet|round(2)}}
+    </div>
+    {% endif %}
+
+    {% endfor %}
+    <!-- Community Cards -->
+    <div class="community-cards">
+        {% for card in gamestate.board_cards %}
+        <img src="../static/images/cards/{{card}}.png" class="card" alt="Card" />
+        {% endfor %}
+    </div>
+
+    <!-- Pot -->
+    <div class="pot">
+        Pot: {{gamestate.pot|round(2)}} BB
+    </div>
+</div>
+
+<div>{{gamestate.action}}</div>

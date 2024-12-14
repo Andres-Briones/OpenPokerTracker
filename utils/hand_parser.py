@@ -199,138 +199,163 @@ def parse_hand_at_upload(ohh_obj):
 
     return hands_data, players_hands_data
 
-def parse_hand(hand_data):
+def get_data_for_replayer(hand_data, amount_in_BB = True):
     if "ohh" not in hand_data:
         print("Error", "Invalid hand data format. Missing 'ohh' key")
         return {}
 
     ohh_data = hand_data["ohh"]
+    
+    # Map player IDs to names for easy reference
+
     players = {player["id"]: player for player in ohh_data["players"]}
-    hero_id = ohh_data.get("hero_player_id") # Can be null
+    name_to_seat = {player["name"]:player["seat"] for player in ohh_data["players"]}
+    hero_id = ohh_data.get("hero_player_id", None) 
+    observed = True if hero_id is None else False
     hero_cards = ""
 
-    parsed_data = {
-        "players": [
-            {
-                "name": player["name"],
-                "seat": player["seat"],
-                "starting_stack": player["starting_stack"],
-                "cards": "? ?",
-                "status": "Active",
-                "chips": float(player["starting_stack"])
-            }
-            for player in ohh_data["players"]
-        ],
-        "actions": [],
-        "board_cards": [],
-        "pot_info": None,
+    hero_seat = players.get(hero_id, 0)["seat"]
+
+    general_data = {
+        "table_name": ohh_data["table_name"],
+        "small_blind_amount": float(ohh_data["small_blind_amount"]),
+        "big_blind_amount": float(ohh_data["big_blind_amount"]),
     }
 
-    # Game state table
-    game_state_table = []
-    current_pot = 0
-    board_cards = []
-    folded_players = set()
-    board = []
+    action_snapshot = {
+        "players": [],
+        "pot" : 0.00,
+        "action": "",
+        "board_cards": [],
+        "street": "Preflop",
+        "final_pots": None
+        }
 
-    current_round = None #Stores the actual round
+    id_to_index= {} # Dictionary to get the index of the player corresponding to the given id
+    for index, player in enumerate(ohh_data["players"]):
+        player_info = {
+            "name": player["name"],
+            "seat": player["seat"],
+            "cards": [],
+            "status": "Active",
+            "chips": float(player["starting_stack"])/general_data["big_blind_amount"] if amount_in_BB else float(player["starting_stack"]),
+            "bet" : 0.00,
+            "dealer": player["seat"] == ohh_data["dealer_seat"],
+            "angle": np.pi* (2*(player["seat"]-hero_seat)/len(ohh_data["players"]) + 1/2)
+            }
+        action_snapshot["players"].append(player_info)
+        id_to_index[player['id']] = index 
+
+    game_states = []
+    need_to_deal_cards = False
+    action_amount = 0
+
+    states_to_pop = []
 
     for round_info in ohh_data["rounds"]:
-        # At the start of each street, reset status to "Waiting" for active players
-        if current_round != round_info["street"]:
-            current_round = round_info["street"]
-            for player in parsed_data["players"]:
-                player["actual_bet"] = 0
-                if player["name"] not in folded_players:
-                    player["status"] = "Waiting"
-                else :
-                    player["status"] = "Folded"
 
-        # Track board cards as they appear
-        if "cards" in round_info :
-            board_cards += round_info["cards"]
+        # If the street changes
+        if action_snapshot["street"] != round_info["street"]:
+            # Change the name of the street
+            action_snapshot["street"] = round_info["street"]
+            # For each player
+            for player in action_snapshot["players"]:
+                # Reset its bet to 0 
+                player["bet"] = 0
 
+            # Add cards to the board
+            if "cards" in round_info:
+                action_snapshot["board_cards"] += round_info["cards"] 
+                action_snapshot["action"] = "New card(s)"
+
+            if action_snapshot["street"] != "Showdown" :
+                game_states.append(action_snapshot)
+
+            #Copy action_snapshot for next action
+            players = []
+            for player in action_snapshot["players"]:
+                players.append(player.copy())
+            board_cards = action_snapshot["board_cards"].copy()
+            action_snapshot = action_snapshot.copy()
+            action_snapshot["players"] = players
+            action_snapshot["board_cards"] = board_cards
+
+        # For each action
         for action in round_info["actions"]:
 
-            if action.get("player_id") == hero_id and "cards" in action:
-                hero_cards = cardsListToString(action["cards"])
+            if action["action"] in ["Post BB", "Post SB", "Post Extra Blind"]:
+                states_to_pop.append(len(game_states))
+
+            player = action_snapshot["players"][id_to_index[action.get("player_id")]]
+            action_amount = float(action.get('amount',0))
+            if amount_in_BB : action_amount = action_amount / general_data["big_blind_amount"]
+
+            # If need to dealt cards, give back cards to every player:
+            if need_to_deal_cards:
+                for pl in action_snapshot["players"]:
+                    pl["cards"] = ['back', 'back']
+                need_to_deal_cards = False
+
+            # If big blind is posted, need to deal cards
+            if action['action'] == "Post BB": need_to_deal_cards = True
+
+            # If cards in action, add it to the player (given to Hero or showed)
+            if action.get("cards"):
+                player["cards"] = action["cards"]
+
+            # If player folds, remove its cards
+            if action['action'] == "Fold":
+                player["cards"] = []
 
             # Generate a description for the action
-            action_amount = float(action.get('amount',0))
             if action_amount == 0:
-                action_description = f"{players[action['player_id']]['name']}: {action['action']}"
+                action_snapshot["action"] = f"{player['name']}: {action['action']}"
             else :
-                action_description = f"{players[action['player_id']]['name']}: {action['action']} for {action_amount}"
+                action_snapshot["action"] = f"{player['name']}: {action['action']} for {action_amount}"
 
-            # Prepare current state snapshot for this action
-            action_snapshot = {
-                "round": current_round,
-                "pot": current_pot,
-                "board": board_cards[:],
-                "players": [],
-                "description": action_description
-            }
+            # Update bet, chip amount and pot
+            player["bet"] += action_amount
+            player["chips"] -= action_amount
+            action_snapshot["pot"] += action_amount
 
-            # Update players’ states based on the action
-            for player in parsed_data["players"]:
-                player_state = {
-                    "name": player["name"],
-                    "status": player["status"],
-                    "actual_bet": player["actual_bet"],
-                    "cards": player["cards"],
-                    "chips": float(player["chips"])
+            game_states.append(action_snapshot)
+
+            #Copy action_snapshot for next action
+            players = []
+            for player in action_snapshot["players"]:
+                players.append(player.copy())
+            board_cards = action_snapshot["board_cards"].copy()
+            action_snapshot = action_snapshot.copy()
+            action_snapshot["players"] = players
+            action_snapshot["board_cards"] = board_cards
+
+            action_amount = 0
+            action_snapshot["action"] = ""
+
+    # Check the firsts actions and remove the undesired ones
+    popped = 0
+    for index in states_to_pop: 
+        game_states.pop(index-popped)
+        popped +=1
+
+    
+    # Include pot and winnings information at the last state
+    game_states[-1]["final_pots"] = [
+        {
+            "rake": float(pot["rake"]),
+            "amount": float(pot["amount"]),
+            "player_wins": [
+                {
+                    "name": action_snapshot["players"][id_to_index[win.get("player_id")]]["name"],
+                    "win_amount": float(win["win_amount"]),
+                    "contributed_rake":float(win["contributed_rake"]),
+                    "cashout_fee": float(win.get("cashout_fee", 0.00)),
+                    "cashout_amount": float(win.get("cashout_amount", win["win_amount"]))
                 }
+                for win in pot["player_wins"]
+            ]
+        }
+        for pot in ohh_data["pots"]
+    ]
 
-                # Apply the current action to the relevant player
-                if player["name"] == players[action["player_id"]]["name"]:
-                    player_state["status"] = action["action"]
-                    if action["action"] == "Fold":
-                        folded_players.add(player["name"])
-                    elif action["action"] == "Dealt Cards" or action["action"] == "Shows Cards" :
-                        player_state["cards"] = cardsListToString(action["cards"])
-                        player["cards"] = player_state["cards"]
-                    else:
-                        # Calculate amount to deduct and update actual_bet
-                        player_state["actual_bet"] += action_amount  # Add to existing bet
-                        player_state["chips"] -= action_amount  # Directly reduce chips by action amount
-                        current_pot += action_amount
-
-                        # Update the player's chips and actual_bet
-                        player["chips"] = player_state["chips"]
-                        player["actual_bet"] = player_state["actual_bet"]
-
-                # Update the main player state in parsed_data for the next action
-                player["status"] = player_state["status"]
-
-                # Append the player state to the action snapshot
-                action_snapshot["players"].append(player_state)
-
-            action_snapshot["pot"] = current_pot
-            game_state_table.append(action_snapshot)
-
-    # Include pot and winnings information if present
-    if "pots" in ohh_data:
-        parsed_data["pot_info"] = [
-            {
-                "rake": float(pot["rake"]),
-                "amount": float(pot["amount"]),
-                "player_wins": [
-                    {
-                        "name": players[win["player_id"]]["name"],
-                        "win_amount": float(win["win_amount"]),
-                        "cashout_fee": float(win.get("cashout_fee", 0.00)),
-                        "cashout_amount": float(win.get("cashout_amount", win["win_amount"]))
-                    }
-                    for win in pot["player_wins"]
-                ]
-            }
-            for pot in ohh_data["pots"]
-        ]
-
-    parsed_data["game_state_table"] = game_state_table
-
-    parsed_data["game_number"] = ohh_data["game_number"]
-    parsed_data["date_time"] = ohh_data["start_date_utc"]
-    parsed_data["hero_cards"] = hero_cards 
-
-    return parsed_data
+    return general_data, game_states

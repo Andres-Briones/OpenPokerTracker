@@ -45,7 +45,7 @@ def load_database_route():
     db_path = os.path.join(current_app.config['DB_DIRECTORY'], f"{db_name}.db")
     session["db_path"] = db_path  # Set the session with the selected database path
     print("OK")
-    return ajax_redirect('hand_replayer.hand_replayer')  # Redirect to replayer page
+    return ajax_redirect('replayer.replayer')  # Redirect to replayer page
 
 @uploads_bp.route('/delete_database', methods=['POST'])
 def delete_database_route():

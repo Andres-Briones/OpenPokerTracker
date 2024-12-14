@@ -1,0 +1,10 @@
+{% for hand in hands_list %}
+<tr class="clickable-row"
+    hx-get="/replayer/select_hand?selected_hand={{hand.id}}" hx-trigger="click" hx-target="#hand-replayer-container">
+    <td>{{ hand.cards}}</td>
+    <td>{{ hand.date_time }}</td>
+    <td>{{ hand.table_name}}</td>
+    <td>{{ hand.profit}}</td>
+</tr>
+{% endfor %}
+

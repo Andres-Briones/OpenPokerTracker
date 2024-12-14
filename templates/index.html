@@ -6,36 +6,53 @@
 
 {% block content %}
 
-<h2>Databases managment</h3>
-    
-    <div class="mainContainer">
-        <!-- List of Existing Databases -->
-        <div class ="selection", style ="max-width : 600px;">
-            <h3>Available Databases</h3>
-            <select class="dropDown" id="DBSelect", size ="5">
-                {% for db in databases %}
-                <option value="{{ db }}">{{ db }}</option>
-                {% endfor %}
-            </select>
-            <div id="loadDelete-Buttons">
-                <form id="loadForm" action="load_database" method="post" style="display:inline;">
-                    <input type="hidden" id="loadDB" name="db_name">
-                    <button type="button" onclick="submitActionForm('load')">Load</button>
-                </form>
-                <form id="deleteForm" action="delete_database" method="post" style="display:inline;">
-                    <input type="hidden" id="deleteDB" name="db_name">
-                    <button type="button" onclick="submitActionForm('delete')">Delete</button>
-                </form>
-            </div>
-            <div>
-                <form action="create_database" method="post">
-                    <label for="new_db_name">New Database:</label>
-                    <input type="text" name="db_name" id="new_db_name" required>
-                    <button type="submit">Create</button>
-                </form>
-            </div>
+<h2>Databases managment</h2>
+
+<div id="database_management" class="main-container">
+    <!-- List of Existing Databases -->
+    <div class = "box" style ="width : 600px;">
+        <h3>Available Databases</h3>
+        <select class="dropDown" id="DBSelect", size ="5">
+            {% for db in databases %}
+            <option value="{{ db }}">{{ db }}</option>
+            {% endfor %}
+        </select>
+        <div id="loadDelete-Buttons">
+            <form id="loadForm" action="load_database" method="post" style="display:inline;">
+                <input type="hidden" id="loadDB" name="db_name">
+                <button type="button" onclick="submitActionForm('load')">Load</button>
+            </form>
+            <form id="deleteForm" action="delete_database" method="post" style="display:inline;">
+                <input type="hidden" id="deleteDB" name="db_name">
+                <button type="button" onclick="submitActionForm('delete')">Delete</button>
+            </form>
+        </div>
+        <div>
+            <form action="create_database" method="post">
+                <label for="new_db_name">New Database:</label>
+                <input type="text" name="db_name" id="new_db_name" required>
+                <button type="submit">Create</button>
+            </form>
         </div>
     </div>
+</div>
+
+<style>
+
+#loadDelete-Buttons{
+    display: flex;
+    justify-content: center;
+    margin-top:10px;
+    margin-bottom:10px;
+}
+
+#database_management button {
+    width: 70px;
+    padding:6px;
+    justify-content:center;
+}
+
+</style>
 
 <script>
 // JavaScript function to update and submit the form
@@ -71,25 +88,25 @@ function ajaxSubmit(eventOrForm) {
         },
         body: formData
     })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(data => {
-                throw new Error(data.error || "An unknown error occurred");
-            });
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            alert("Operation completed successfully!");
-            form.reset(); // Reset the form after successful submission
-        } else if (data.redirect) {
-            window.location.href = data.redirect; // Redirect if specified
-        }
-    })
-    .catch(error => {
-        alert(error.message); // Display error in an alert
-    });
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || "An unknown error occurred");
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                alert("Operation completed successfully!");
+                form.reset(); // Reset the form after successful submission
+            } else if (data.redirect) {
+                window.location.href = data.redirect; // Redirect if specified
+            }
+        })
+        .catch(error => {
+            alert(error.message); // Display error in an alert
+        });
 }
 
 // Attach `ajaxSubmit` to all forms on the page
