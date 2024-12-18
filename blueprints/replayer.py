@@ -63,23 +63,24 @@ def replayer():
 
 @replayer_bp.route('/upload', methods=['POST'])
 def upload():
+    message = None
     db_path = session["db_path"]
-
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part in the request"}), 400
 
     files = request.files.getlist('file')  # Get all files uploaded as 'file'
     len_files = len(files)
     upload_path = current_app.config["UPLOADS_PATH"]
 
     for num, file in enumerate(files):
+        print(type(file))
         if file.filename == '':
             continue  # Skip empty filenames
-        if file.filename[-4:] != ".OHH":
+
+        if file.filename.split('.')[-1] != ".OHH":
             print(f"File {file.filename} skipped, it's not an OHH file. ({num+1}/{len_files})")
+            message = "Some files were skipped because their file extension was not OHH"
             continue
         
-        file_path = upload_path + "test.OHH"
+        file_path = upload_path + "tmp.OHH"
         file.save(file_path)  # Save file to uploads directory
 
         with open(file_path, 'r') as f:
@@ -90,7 +91,7 @@ def upload():
 
     hands_list, count = get_hands_list(db_path, session["page"], session["filter"]) 
 
-    return render_template("hands_table.html", hands_list=hands_list, total_count = count)
+    return render_template("hands_table.html", hands_list=hands_list, total_count = count, message = message) 
 
 
 

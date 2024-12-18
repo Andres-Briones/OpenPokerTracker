@@ -307,7 +307,7 @@ def get_player_full_statistics(db_path, player_name, min_players=2, max_players=
         ROUND(SUM(rake),2) AS total_rake,
         ROUND(SUM(profit),2) AS profit,
         ROUND(AVG(rake)/h.big_blind_amount*100,2) AS rake_bb_per_100hand,
-        ROUND(AVG(profit)/h.big_blind_amount*100,2) AS bb_per_hand
+        ROUND(AVG(profit)/h.big_blind_amount,2) AS bb_per_hand
         FROM players_hands ph JOIN hands h ON h.id == ph.hand_id JOIN players p ON p.id == ph.player_id
         WHERE p.name == "{player_name}" AND h.number_players >= {min_players} AND  h.number_players <= {max_players} 
         """

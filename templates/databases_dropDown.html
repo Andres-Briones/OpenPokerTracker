@@ -1,0 +1,7 @@
+{% for db in databases %}
+<option value="{{ db }}">{{ db }}</option>
+{% endfor %}
+
+{% if message %}
+<script> alert(" {{message}} ") </script>
+{% endif %}

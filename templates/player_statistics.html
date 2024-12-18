@@ -1,0 +1,154 @@
+<div class="box">
+    <!-- Slider to control rolling window size -->
+    <h3>Player Statistics</h3>
+    <!-- Player Plot Display -->
+    {% if selected_player %}
+    <div>
+        <img id="playerChart" src="{{ url_for('statistics.player_stats_plot', name=selected_player) }}" style="max-width: 100%; height: auto;">
+    </div>
+
+    <label for="windowSizeSlider" id="sliderLabel">
+        Rolling mean window size:
+        <input type="range" id="windowSizeSlider" min="5" max="100" value="10" step ="5" oninput="updatePlot()" />
+        <span id="windowSizeValue">10</span>  <!-- Display slider value -->
+    </label>
+    {% else %}
+    <div style="margin:10px">Select a player to view their statistics.</div>
+    {% endif %}
+</div>
+
+<div class="box">
+    <h3> Player Statistics per Position (for 4 to 6 players) </h3>
+    {% if selected_player %}
+    <table style="width: 80%; border-collapse: collapse ; top-margin: 2px; ">
+        <thead style="position: sticky; top: 0; z-index: 1;">
+            <tr>
+                <th>Position</th>
+                <th>Hands</th>
+                <th>VPIP (%)</th>
+                <th>PFR (%)</th>
+                <th>AF</th>
+                <th>2bet (%)</th>
+                <th>limp (%)</th>
+                <th>3bet (%)</th>
+                <th>Win rate (bb/hand)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in position_stats %}
+            <tr>
+                <td>{{ p.position}}</td>
+                <td>{{ p.hands }}</td>
+                <td>{{ p.VPIP}}</td>
+                <td>{{ p.PFR}}</td>
+                <td>{{ p.AF}}</td>
+                <td>{{ p.two_bet}}</td>
+                <td>{{ p.limp}}</td>
+                <td>{{ p.three_bet}}</td>
+                <td>{{ p.bb_per_hand }}</td>
+            </tr>
+            {% endfor %}
+
+            <tr>
+                <td> Overall </td>
+                <td>{{ player_stats.hands }}</td>
+                <td>{{ player_stats.VPIP}}</td>
+                <td>{{ player_stats.PFR}}</td>
+                <td>{{ player_stats.AF}}</td>
+                <td>{{ player_stats.two_bet}}</td>
+                <td>{{ player_stats.limp}}</td>
+                <td>{{ player_stats.three_bet}}</td>
+                <td>{{ player_stats.bb_per_hand }}</td>
+            </tr>
+        </tbody>
+    </table>
+    {% else %}
+    <div style="margin:10px">Select a player to view their statistics.</div>
+    {% endif %}
+</div>
+
+<div class="box">
+    <h3> Player Statistics per Position (2 or 3 players) </h3>
+    {% if selected_player %}
+    <table style="width: 80%; border-collapse: collapse ; top-margin: 2px; ">
+        <thead style="position: sticky; top: 0; z-index: 1;">
+            <tr>
+                <th>Position</th>
+                <th>Hands</th>
+                <th>VPIP (%)</th>
+                <th>PFR (%)</th>
+                <th>AF</th>
+                <th>2bet (%)</th>
+                <th>limp (%)</th>
+                <th>3bet (%)</th>
+                <th>Win rate (bb/hand)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in position_stats_short %}
+            <tr>
+                <td>{{ p.position}}</td>
+                <td>{{ p.hands }}</td>
+                <td>{{ p.VPIP}}</td>
+                <td>{{ p.PFR}}</td>
+                <td>{{ p.AF}}</td>
+                <td>{{ p.two_bet}}</td>
+                <td>{{ p.limp}}</td>
+                <td>{{ p.three_bet}}</td>
+                <td>{{ p.bb_per_hand }}</td>
+            </tr>
+            {% endfor %}
+
+            <tr>
+                <td> Overall </td>
+                <td>{{ player_stats_short.hands }}</td>
+                <td>{{ player_stats_short.VPIP}}</td>
+                <td>{{ player_stats_short.PFR}}</td>
+                <td>{{ player_stats_short.AF}}</td>
+                <td>{{ player_stats_short.two_bet}}</td>
+                <td>{{ player_stats_short.limp}}</td>
+                <td>{{ player_stats_short.three_bet}}</td>
+                <td>{{ player_stats_short.bb_per_hand }}</td>
+            </tr>
+        </tbody>
+    </table>
+    {% else %}
+    <div style="margin:10px">Select a player to view their statistics.</div>
+    {% endif %}
+</div>
+
+<div class="box" >
+    <h3>Player Opening Range </h3>
+    <!-- Player Plot Display -->
+    {% if selected_player %}
+    <div>
+        <img id="playerOpeningRange" src="{{url_for('statistics.player_opening_range_plot', name=selected_player) }}" style="max-width: 100%; height: auto;">
+    </div>
+    {% else %}
+    <div style="margin:10px">Select a player to view their opening range.</div>
+    {% endif %}
+</div>
+
+<style>
+/* Center the content inside the label */
+#sliderLabel {
+    display: flex;
+    align-items: center; /* Center text and slider vertically */
+    gap: 15px;           /* Add space between the text, slider, and displayed value */
+    margin-top: 20px;    /* Add top margin for spacing */
+    justify-content: center; /* Center-align everything inside label */
+}
+</style>
+
+
+<script>
+// JavaScript to handle slider changes and update the plot dynamically
+function updatePlot() {
+    const playerName = "{{selected_player}}";  // Player name passed from the server
+    const windowSize = document.getElementById("windowSizeSlider").value;
+    document.getElementById("windowSizeValue").textContent = windowSize;  // Update displayed slider value
+
+    // Update plot image by changing the 'src' attribute with new window size
+    document.getElementById("playerChart").src = `/statistics/player_stats_plot?name=${playerName}&window_size=${windowSize}`;
+}
+</script>
