@@ -62,7 +62,7 @@ Replaying Hands: Navigate to the hand replayer section to upload or select a han
 Contributions are welcome! If you have ideas for improving the application, please fork the repository, make your changes, and submit a pull request.
 License
 
-This project is licensed under the MIT License.
+Copyright (c) 2024 Andres Briones. This project is licensed under the GNU General Public License, version 3 (GPL-3.0): see [LICENSE](LICENSE).
 
 ### Future Plans
 
